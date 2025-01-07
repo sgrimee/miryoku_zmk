@@ -1,21 +1,21 @@
 # Copyright 2022 Manna Harbour
 # https://github.com/manna-harbour/miryoku
 
-name: 'Build Example corne nice_nano_v2 nice_view'
+name: "Build aurora_sweep - ferris v1"
 on: workflow_dispatch
 jobs:
   build:
     uses: ./.github/workflows/main.yml
     secrets: inherit
     with:
-      alphas: 'QWERTY'
+      alphas: '["QWERTY"]'
       board: '["nice_nano_v2"]'
-      clipboard: 'mac'
-      custom_config: 'default'
-      extra: 'ColemakDHK'
-      kconfig: 'default'
-      layers: 'default'
-      mapping: 'default'
-      nav: 'default'
+      clipboard: '["mac"]'
+      # custom_config: 
+      extra: '["ColemakDHK"]'
+      # kconfig: 
+      # layers: 
+      # mapping: 
+      # nav: 
       shield: '["splitkb_aurora_sweep_left","splitkb_aurora_sweep_right"]'
-      tap: 'QWERTY'      
+      tap: '["QWERTY"]'
