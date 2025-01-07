@@ -8,14 +8,14 @@ jobs:
     uses: ./.github/workflows/main.yml
     secrets: inherit
     with:
-      alphas: 'qwerty'
+      alphas: 'QWERTY'
       board: '["nice_nano_v2"]'
       clipboard: 'mac'
       custom_config: 'default'
-      extra: 'colemakdh'
+      extra: 'ColemakDHK'
       kconfig: 'default'
       layers: 'default'
       mapping: 'default'
       nav: 'default'
       shield: '["splitkb_aurora_sweep_left","splitkb_aurora_sweep_right"]'
-      tap: 'qwerty'      
+      tap: 'QWERTY'      
