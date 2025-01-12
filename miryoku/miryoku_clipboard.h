@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define MIRYOKU_CLIPBOARD_FUN
+
 #if defined (MIRYOKU_CLIPBOARD_FUN)
   #define U_RDO &kp K_AGAIN
   #define U_PST &kp K_PASTE
