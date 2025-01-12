@@ -10,9 +10,9 @@ jobs:
     with:
       alphas: '["QWERTY"]'
       board: '["nice_nano_v2"]'
-      clipboard: '["mac"]'
+      # clipboard: '["mac"]'
       # custom_config: 
-      extra: '["ColemakDHK"]'
+      # extra: '["ColemakDHK"]'
       # kconfig: 
       # layers: 
       # mapping: 
