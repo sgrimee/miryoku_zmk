@@ -2,7 +2,13 @@
 # https://github.com/manna-harbour/miryoku
 
 name: "Build aurora_sweep - ferris v1"
-on: workflow_dispatch
+on: 
+  workflow_dispatch:
+  push:
+    paths:
+      - "custom_config.h"
+      - "config/*.keymap"
+      - "config/*.dtsi"
 jobs:
   build:
     uses: ./.github/workflows/main.yml
