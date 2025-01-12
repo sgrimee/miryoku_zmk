@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "custom_config.h"
-      - "config/*.keymap"
-      - "config/*.dtsi"
+      - "config/*"
+      - "miryoku/*"
 jobs:
   build:
     uses: ./.github/workflows/main.yml
