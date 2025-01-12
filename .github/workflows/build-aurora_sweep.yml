@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/main.yml
     secrets: inherit
     with:
-      alphas: '["QWERTY"]'
+      # alphas: '["QWERTY"]'
       board: '["nice_nano_v2"]'
       # clipboard: '["mac"]'
       # custom_config: 
@@ -24,4 +24,4 @@ jobs:
       # mapping: 
       # nav: 
       shield: '["splitkb_aurora_sweep_left","splitkb_aurora_sweep_right"]'
-      tap: '["QWERTY"]'
+      # tap: '["QWERTY"]'
