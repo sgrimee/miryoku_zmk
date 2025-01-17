@@ -55,6 +55,15 @@ U_NP,              U_NP,              &kp K_APP,         &kp BSPC,          &kp 
 
 #define MIRYOKU_CLIPBOARD_MAC
 
+#define MIRYOKU_KLUDGE_THUMBCOMBOS_TERM 200
+#define MIRYOKU_KLUDGE_THUMBCOMBOS_MACRO(LAYER, POSITION, BINDING) \
+thumbcombos_ ## LAYER ## _ ## POSITION { \
+  layers = <LAYER>; \
+  key-positions = <MIRYOKU_KLUDGE_THUMBCOMBOS_ ## POSITION>; \
+  bindings = <BINDING>; \
+  timeout-ms = <MIRYOKU_KLUDGE_THUMBCOMBOS_TERM>; \
+};
+
 / {
   combos {
     compatible = "zmk,combos";
