@@ -4,7 +4,5 @@
 #include "../miryoku/custom_config.h"
 
 #include "../miryoku/mapping/34/ferris.h"
-// overriden in custom_config
-//#undef MIRYOKU_KLUDGE_THUMBCOMBOS
 
 #include "../miryoku/miryoku.dtsi"
