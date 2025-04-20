@@ -2,7 +2,7 @@
 &kp Q,             &kp W,             &kp E,             &kp R,             &kp T,             &kp Y,             &kp U,             &kp I,             &kp O,             &kp P,             \
 U_MT(LCTRL, A),    U_MT(LALT, S),     U_MT(LGUI, D),     U_MT(LSHFT, F),    &kp G,             &kp H,             U_MT(LSHFT, J),    U_MT(RGUI, K),     U_MT(LALT, L),     U_MT(RCTRL, SQT),   \
 U_LT(U_BUTTON, Z), U_MT(RALT, X),     &kp C,             &kp V,             &kp B,             &kp N,             &kp M,             &kp COMMA,         U_MT(RALT, DOT),   U_LT(U_BUTTON, SLASH),\
-U_NP,              U_NP,              U_LT(U_FUN, ESC),  U_LT(U_NUM, SPACE), U_LT(U_NAV, TAB), U_LT(U_SYM, BSPC), U_LT(U_BUTTON, RET),  U_LT(U_MEDIA, DEL), U_NP,             U_NP
+U_NP,              U_NP,              U_LT(U_FUN, ESC),  U_LT(U_NUM, SPACE), U_LT(U_NAV, TAB), U_LT(U_SYM, BSPC), U_LT(U_BUTTON, RET), U_LT(U_MEDIA, DEL), U_NP,           U_NP
 
 #define MIRYOKU_LAYER_TAP \
 &kp Q,             &kp W,             &kp E,             &kp R,             &kp T,             &kp Y,             &kp U,             &kp I,             &kp O,             &kp P,             \
@@ -12,7 +12,7 @@ U_NP,              U_NP,              &kp ESC,           &kp SPACE,         &kp 
 
 #define MIRYOKU_LAYER_BUTTON \
 U_RDO,             U_UND,             U_PST,             U_CPY,             U_CUT,             U_CUT,             U_CPY,             U_PST,             U_UND,             U_RDO,             \
-&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_CPY,              U_NU,              &kp RSHFT,         &kp RGUI,          &kp LALT,          &kp RCTRL,         \
+&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_CPY,             U_NU,              &kp RSHFT,         &kp RGUI,          &kp LALT,          &kp RCTRL,         \
 U_UND,             U_CUT,             U_CPY,             U_PST,             U_PST,             U_RDO,             U_PST,             U_CPY,             U_CUT,             U_UND,             \
 U_NP,              U_NP,              U_BTN3,            U_BTN1,            U_BTN2,            U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
 
@@ -39,7 +39,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,             &kp LBKT,          &kp N7,            &kp N8,            &kp N9,            &kp RBKT,   \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,             &kp SEMI,          &kp N4,            &kp N5,            &kp N6,            &kp EQUAL,  \
 U_NA,              &u_to_U_NUM,       &u_to_U_NAV,       &kp RALT,          U_NA,             &kp GRAVE,         &kp N1,            &kp N2,            &kp N3,            &kp BSLH,   \
-U_NA,              U_NA,              U_NA,              U_NP,              U_NP,             &kp N0,            U_NP,              &kp DOT,           &kp N0,            &kp MINUS,
+U_NA,              U_NA,              U_NA,              U_NP,              U_NP,             &kp N0,            U_NP,              &kp DOT,           &kp N0,            &kp MINUS
 
 #define MIRYOKU_LAYER_SYM \
 &kp LBRC,          &kp AMPS,          &kp ASTRK,         &kp LPAR,          &kp RBRC,          U_NA,              &u_to_U_BASE,      &u_to_U_EXTRA,     &u_to_U_TAP,       U_BOOT,            \
