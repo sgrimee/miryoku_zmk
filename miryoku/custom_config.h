@@ -19,7 +19,7 @@ U_NP,              U_NP,              U_BTN3,            U_BTN1,            U_BT
 
 #define MIRYOKU_LAYER_NAV \
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              U_CUT,           U_CPY,             U_PST,             U_UND,             U_RDO,      \
-&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              U_CPY,           &kp LEFT,          &kp DOWN,          &kp UP,            U_RIGHT,    \
+&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              U_CPY,           &kp LEFT,          &kp DOWN,          &kp UP,            &kp RIGHT,    \
 U_NA,              &kp RALT,          &u_to_U_NUM,       &u_to_U_NAV,       U_NA,              U_PST,           &kp HOME,          &kp PG_DN,         &kp PG_UP,         &kp END,    \
 U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              &kp BSPC,        &kp RET,           &kp DEL,           U_NP,              U_NP
 
@@ -39,7 +39,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,             &kp LBKT,          &kp N7,            &kp N8,            &kp N9,            &kp RBKT,   \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,             &kp SEMI,          &kp N4,            &kp N5,            &kp N6,            &kp EQUAL,  \
 U_NA,              &u_to_U_NUM,       &u_to_U_NAV,       &kp RALT,          U_NA,             &kp GRAVE,         &kp N1,            &kp N2,            &kp N3,            &kp BSLH,   \
-U_NA,              U_NA,              U_NA,              U_NP,              U_NP,             &kp N0,            &kp DOT,           U_NP,              U_NP,              U_NP
+U_NP,              U_NP,              U_NA,              U_NA,              U_NA,             &kp N0,            &kp DOT,           U_NA,              U_NP,              U_NP
 
 #define MIRYOKU_LAYER_SYM \
 &kp LBRC,          &kp AMPS,          &kp ASTRK,         &kp LPAR,          &kp RBRC,          U_NA,              &u_to_U_BASE,      &u_to_U_EXTRA,     &u_to_U_TAP,       U_BOOT,            \
