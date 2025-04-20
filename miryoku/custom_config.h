@@ -39,7 +39,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,             &kp LBKT,          &kp N7,            &kp N8,            &kp N9,            &kp RBKT,   \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,             &kp SEMI,          &kp N4,            &kp N5,            &kp N6,            &kp EQUAL,  \
 U_NA,              &u_to_U_NUM,       &u_to_U_NAV,       &kp RALT,          U_NA,             &kp GRAVE,         &kp N1,            &kp N2,            &kp N3,            &kp BSLH,   \
-U_NA,              U_NA,              U_NA,              U_NP,              U_NP              &kp N0,            U_NP,              &kp DOT,           &kp N0,            &kp MINUS,
+U_NA,              U_NA,              U_NA,              U_NP,              U_NP,             &kp N0,            U_NP,              &kp DOT,           &kp N0,            &kp MINUS,
 
 #define MIRYOKU_LAYER_SYM \
 &kp LBRC,          &kp AMPS,          &kp ASTRK,         &kp LPAR,          &kp RBRC,          U_NA,              &u_to_U_BASE,      &u_to_U_EXTRA,     &u_to_U_TAP,       U_BOOT,            \
