@@ -22,5 +22,5 @@ jobs:
       # layers: 
       # mapping: 
       # nav: 
-      shield: '["splitkb_aurora_sweep_left","splitkb_aurora_sweep_right"]'
+      shield: '["splitkb_aurora_sweep_left","splitkb_aurora_sweep_right", "settings_reset"]'
       # tap: '["QWERTY"]'
