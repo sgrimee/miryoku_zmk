@@ -11,20 +11,20 @@ U_NP,              U_NP,              U_LT(U_FUN, ESC),U_LT(U_NUM, SPACE), U_LT(
 U_NP,              U_NP,              &kp ESC,           &kp SPACE,         &kp TAB,           &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
 
 #define MIRYOKU_LAYER_BUTTON \
-U_UND,             U_CUT,             U_CPY,             U_PST,             U_RDO,             U_RDO,             U_PST,             U_CPY,             U_CUT,             U_UND,             \
+U_UND,             U_CUT,             U_CPY,             U_PST,             U_RDO,             U_CUT,             U_CPY,             U_PST,             U_UND,             U_RDO,             \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NU,              U_NU,              &kp RSHFT,         &kp RGUI,          &kp LALT,          &kp RCTRL,         \
 U_UND,             U_CUT,             U_CPY,             U_PST,             U_RDO,             U_RDO,             U_PST,             U_CPY,             U_CUT,             U_UND,             \
 U_NP,              U_NP,              U_BTN3,            U_BTN1,            U_BTN2,            U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
 
 
 #define MIRYOKU_LAYER_NAV \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              U_CPY,           U_CUT,             U_UND,             U_RDO,             U_NP,              \
-&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              &kp LEFT,        &kp DOWN,          &kp UP,            &kp RIGHT,         U_NP,               \
+U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              U_CUT,           U_CPY,             U_PST,             U_UND,             U_RDO,              \
+&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              U_CPY,           &kp LEFT,          &kp DOWN,          &kp UP,            U_RIGHT,               \
 U_NA,              &kp RALT,          &u_to_U_NUM,       &u_to_U_NAV,       U_NA,              U_PST,           &kp PG_DN,         &kp PG_UP,         &kp HOME,          &kp END,           \
 U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              &kp TAB,         &kp RET,           &kp DEL,           U_NP,              U_NP
 
 #define MIRYOKU_LAYER_MOUSE \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              U_RDO,             U_PST,             U_CPY,             U_CUT,             U_UND,             \
+U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              U_CUT,             U_CPY,             U_PST,             U_UND,             U_RDO,             \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              U_NU,              U_MS_L,            U_MS_D,            U_MS_U,            U_MS_R,            \
 U_NA,              &kp RALT,          &u_to_U_SYM,       &u_to_U_MOUSE,     U_NA,              U_NU,              U_WH_L,            U_WH_D,            U_WH_U,            U_WH_R,            \
 U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
