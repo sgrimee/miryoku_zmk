@@ -2,13 +2,13 @@
 &kp Q,             &kp W,             &kp E,             &kp R,             &kp T,             &kp Y,             &kp U,             &kp I,             &kp O,             &kp P,             \
 U_MT(LCTRL, A),    U_MT(LALT, S),     U_MT(LGUI, D),     U_MT(LSHFT, F),    &kp G,             &kp H,             U_MT(LSHFT, J),    U_MT(RGUI, K),     U_MT(LALT, L),     U_MT(RCTRL, SQT),   \
 U_LT(U_BUTTON, Z), U_MT(RALT, X),     &kp C,             &kp V,             &kp B,             &kp N,             &kp M,             &kp COMMA,         U_MT(RALT, DOT),   U_LT(U_BUTTON, SLASH),\
-U_NP,              U_NP,              U_LT(U_FUN, ESC),U_LT(U_NUM, BSPC), U_LT(U_NAV, SPACE),  U_LT(U_SYM, TAB),U_LT(U_MEDIA, RET),  U_LT(, DEL),  U_NP,              U_NP
+U_NP,              U_NP,              U_LT(U_FUN, ESC),U_LT(U_NUM, SPACE), U_LT(U_NAV, TAB),  U_LT(U_SYM, BSPC),U_LT(U_MEDIA, RET),  U_LT(, DEL),  U_NP,              U_NP
 
 #define MIRYOKU_LAYER_TAP \
 &kp Q,             &kp W,             &kp E,             &kp R,             &kp T,             &kp Y,             &kp U,             &kp I,             &kp O,             &kp P,             \
 &kp A,             &kp S,             &kp D,             &kp F,             &kp G,             &kp H,             &kp J,             &kp K,             &kp L,             &kp SQT,           \
 &kp Z,             &kp X,             &kp C,             &kp V,             &kp B,             &kp N,             &kp M,             &kp COMMA,         &kp DOT,           &kp SLASH,         \
-U_NP,              U_NP,              &kp ESC,           &kp BSPC,          &kp SPACE,           &kp TAB,         &kp RET,           &kp DEL,           U_NP,              U_NP
+U_NP,              U_NP,              &kp ESC,           &kp SPACE,         &kp TAB,           &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
 
 #define MIRYOKU_LAYER_BUTTON \
 U_UND,             U_CUT,             U_CPY,             U_PST,             U_RDO,             U_RDO,             U_PST,             U_CPY,             U_CUT,             U_UND,             \
