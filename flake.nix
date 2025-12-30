@@ -13,47 +13,69 @@
     forAllSystems = nixpkgs.lib.genAttrs (nixpkgs.lib.attrNames zmk-nix.packages);
     zephyrDepsHash = "sha256-arF/XHsZXtL9LNgeN6Cni43nzRJyFuzyxKqqPJsvALA=";
   in {
-    packages = forAllSystems (system: rec {
-      default = firmware;
-
-      # Main firmware (left + right halves with ZMK Studio)
-      firmware = zmk-nix.legacyPackages.${system}.buildSplitKeyboard {
-        name = "aurora-sweep-firmware";
-        src = nixpkgs.lib.sourceFilesBySuffices self [
-          ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
-          ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
-        ];
-        board = "nice_nano";
-        shield = "splitkb_aurora_sweep_%PART%";
-        enableZmkStudio = true;
-        inherit zephyrDepsHash;
-        meta = {
-          description = "Miryoku ZMK firmware for Aurora Sweep with ZMK Studio";
-          license = nixpkgs.lib.licenses.mit;
-          platforms = nixpkgs.lib.platforms.all;
+      packages = forAllSystems (system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        firmware-base = zmk-nix.legacyPackages.${system}.buildSplitKeyboard {
+          name = "aurora-sweep-firmware";
+          src = nixpkgs.lib.sourceFilesBySuffices self [
+            ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+            ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
+          ];
+          board = "nice_nano";
+          shield = "splitkb_aurora_sweep_%PART%";
+          enableZmkStudio = true;
+          inherit zephyrDepsHash;
+          extraCmakeFlags = [ "-DCONFIG_BUILD_OUTPUT_HEX=y" ];
+          installPhase = ''
+            runHook preInstall
+            mkdir $out
+            cp */*.uf2 $out/ 2>/dev/null || true
+            cp */*.hex $out/ 2>/dev/null || true
+            runHook postInstall
+          '';
         };
-      };
+      in rec {
+        default = firmware;
 
-      # Settings reset firmware (build separately with: nix build .#settings-reset)
-      settings-reset = zmk-nix.legacyPackages.${system}.buildKeyboard {
-        name = "settings-reset";
-        src = nixpkgs.lib.sourceFilesBySuffices self [
-          ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
-          ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
-        ];
-        board = "nice_nano";
-        shield = "settings_reset";
-        inherit zephyrDepsHash;
-        meta = {
-          description = "Settings reset firmware for nice!nano v2";
-          license = nixpkgs.lib.licenses.mit;
-          platforms = nixpkgs.lib.platforms.all;
+        # Main firmware (left + right halves with ZMK Studio) - with HEX files in result/
+        firmware = pkgs.runCommand "aurora-sweep-firmware-combined" {} ''
+          mkdir $out
+          ln -s ${firmware-base.left}/zmk.uf2 $out/zmk_left.uf2
+          ln -s ${firmware-base.left}/zmk.hex $out/zmk_left.hex
+          ln -s ${firmware-base.right}/zmk.uf2 $out/zmk_right.uf2
+          ln -s ${firmware-base.right}/zmk.hex $out/zmk_right.hex
+        '';
+
+        firmware-base-export = firmware-base;
+
+        # Settings reset firmware (build separately with: nix build .#settings-reset)
+        settings-reset = zmk-nix.legacyPackages.${system}.buildKeyboard {
+          name = "settings-reset";
+          src = nixpkgs.lib.sourceFilesBySuffices self [
+            ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+            ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
+          ];
+          board = "nice_nano";
+          shield = "settings_reset";
+          inherit zephyrDepsHash;
+          extraCmakeFlags = [ "-DCONFIG_BUILD_OUTPUT_HEX=y" ];
+          installPhase = ''
+            runHook preInstall
+            mkdir $out
+            cp */*.uf2 $out/ 2>/dev/null || true
+            cp */*.hex $out/ 2>/dev/null || true
+            runHook postInstall
+          '';
+          meta = {
+            description = "Settings reset firmware for nice!nano v2";
+            license = nixpkgs.lib.licenses.mit;
+            platforms = nixpkgs.lib.platforms.all;
+          };
         };
-      };
 
-      flash = zmk-nix.packages.${system}.flash.override { inherit firmware; };
-      update = zmk-nix.packages.${system}.update;
-    });
+        flash = zmk-nix.packages.${system}.flash.override { firmware = firmware-base-export; };
+        update = zmk-nix.packages.${system}.update;
+     });
 
     devShells = forAllSystems (system: {
       default = zmk-nix.devShells.${system}.default;

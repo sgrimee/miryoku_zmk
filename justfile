@@ -1,5 +1,7 @@
 # Miryoku ZMK firmware build commands
 
+set shell := ["bash", "-c"]
+
 # List all available recipes
 default:
     @just --list --justfile {{justfile()}}
@@ -12,9 +14,56 @@ build:
 build-reset:
     nix build .#settings-reset
 
-# Flash main firmware interactively
+# Flash main firmware via DFU serial (macOS) or USB drive (Linux)
 flash:
-    nix run .#flash
+    @if [[ "$(uname)" == "Darwin" ]]; then \
+        echo "Flashing Aurora Sweep firmware via DFU serial (macOS)..."; \
+        echo ""; \
+        TMPDIR=$(mktemp -d); \
+        echo "Creating DFU packages in $TMPDIR..."; \
+        uv tool run adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application result/zmk_left.hex "$TMPDIR/dfu_left.zip" && \
+        uv tool run adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application result/zmk_right.hex "$TMPDIR/dfu_right.zip" || { \
+            echo "ERROR: Failed to create DFU packages"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        }; \
+        echo ""; \
+        echo "=== LEFT HALF ==="; \
+        echo "1. Double-click the RESET button on the left half to enter DFU bootloader"; \
+        read -p "2. Press Enter when ready to flash... " _; \
+        LEFT_PORT=$(ls -t /dev/cu.usb* 2>/dev/null | head -1); \
+        if [ -z "$LEFT_PORT" ]; then \
+            echo "ERROR: No USB serial port found. Make sure left half is in bootloader mode."; \
+            echo "Available ports: $(ls /dev/cu.usb* 2>/dev/null || echo 'none')"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        fi; \
+        echo "Flashing to $LEFT_PORT..."; \
+        uv tool run adafruit-nrfutil dfu serial --package "$TMPDIR/dfu_left.zip" -p "$LEFT_PORT" -b 115200 && \
+        echo "✓ Left half flashed successfully"; \
+        echo ""; \
+        echo "=== RIGHT HALF ==="; \
+        echo "1. Disconnect left half"; \
+        echo "2. Connect right half to USB"; \
+        echo "3. Double-click the RESET button on the right half to enter DFU bootloader"; \
+        read -p "4. Press Enter when ready to flash... " _; \
+        RIGHT_PORT=$(ls -t /dev/cu.usb* 2>/dev/null | head -1); \
+        if [ -z "$RIGHT_PORT" ]; then \
+            echo "ERROR: No USB serial port found. Make sure right half is in bootloader mode."; \
+            echo "Available ports: $(ls /dev/cu.usb* 2>/dev/null || echo 'none')"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        fi; \
+        echo "Flashing to $RIGHT_PORT..."; \
+        uv tool run adafruit-nrfutil dfu serial --package "$TMPDIR/dfu_right.zip" -p "$RIGHT_PORT" -b 115200 && \
+        echo "✓ Right half flashed successfully"; \
+        echo ""; \
+        rm -rf "$TMPDIR"; \
+        echo "✓ Both halves flashed successfully!"; \
+        echo "Your Aurora Sweep is ready to use."; \
+    else \
+        nix run .#flash; \
+    fi
 
 # Update ZMK/Zephyr versions and zephyrDepsHash
 update:
