@@ -8,7 +8,7 @@ U_MT(LCTRL, A),    U_MT(LALT, S),     U_MT(LGUI, D),     U_MT(LSHFT, F),    &kp 
 U_LT(U_BUTTON, Z), U_MT(RALT, X),     &kp C,             &kp V,             &kp B,             \
 &kp N,             &kp M,             &kp COMMA,         U_MT(RALT, DOT),   U_LT(U_BUTTON, SLASH), \
 \
-U_NP,              U_NP,              U_LT(U_FUN, ESC),  U_LT(U_NUM, TAB),   U_LT(U_NAV, SPACE), \
+U_NP,              U_NP,              U_LT(U_FUN, ESC),  U_LT(U_NUM, SPACE), U_LT(U_NAV, TAB), \
 U_LT(U_SYM, BSPC), U_LT(U_BUTTON, RET), U_LT(U_MEDIA, DEL), U_NP,           U_NP
 
 #define MIRYOKU_LAYER_TAP \
@@ -21,7 +21,7 @@ U_LT(U_SYM, BSPC), U_LT(U_BUTTON, RET), U_LT(U_MEDIA, DEL), U_NP,           U_NP
 &kp Z,             &kp X,             &kp C,             &kp V,             &kp B,             \
 &kp N,             &kp M,             &kp COMMA,         &kp DOT,           &kp SLASH,         \
 \
-U_NP,              U_NP,              &kp ESC,           &kp TAB,           &kp SPACE,         \
+U_NP,              U_NP,              &kp ESC,           &kp SPACE,         &kp TAB,         \
 &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
 
 #define MIRYOKU_LAYER_BUTTON \
