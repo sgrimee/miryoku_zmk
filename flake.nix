@@ -23,7 +23,7 @@
           ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
           ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
         ];
-        board = "nice_nano_v2";
+        board = "nice_nano";
         shield = "splitkb_aurora_sweep_%PART%";
         enableZmkStudio = true;
         inherit zephyrDepsHash;
@@ -41,7 +41,7 @@
           ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
           ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
         ];
-        board = "nice_nano_v2";
+        board = "nice_nano";
         shield = "settings_reset";
         inherit zephyrDepsHash;
         meta = {
