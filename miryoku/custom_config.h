@@ -40,13 +40,13 @@ U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
 
 #define MIRYOKU_LAYER_NAV \
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
-U_CUT,             U_CPY,             U_PST,             U_UND,             U_RDO,             \
+U_NA,              U_NA,              U_NA,              U_NA,              U_NA,              \
 \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \
-U_CPY,             &kp LEFT,          &kp DOWN,          &kp UP,            &kp RIGHT,         \
+&kp LEFT,          &kp DOWN,          &kp UP,            &kp RIGHT,         U_NA,              \
 \
 U_NA,              &kp RALT,          &u_to_U_NUM,       &u_to_U_NAV,       U_NA,              \
-U_PST,             &kp HOME,          &kp PG_DN,         &kp PG_UP,         &kp END,           \
+&kp HOME,          &kp PG_DN,         &kp PG_UP,         &kp END,           U_NA,              \
 \
 U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              \
 &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
