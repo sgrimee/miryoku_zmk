@@ -51,19 +51,6 @@ U_NA,              &kp RALT,          &u_to_U_NUM,       &u_to_U_NAV,       U_NA
 U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              \
 &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
 
-#define MIRYOKU_LAYER_MOUSE \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
-U_CUT,             U_CPY,             U_PST,             U_UND,             U_RDO,             \
-\
-&kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \
-U_CPY,             U_MS_L,            U_MS_D,            U_MS_U,            U_MS_R,            \
-\
-U_NA,              &kp RALT,          &u_to_U_SYM,       &u_to_U_MOUSE,     U_NA,              \
-U_PST,             U_WH_L,            U_WH_D,            U_WH_U,            U_WH_R,            \
-\
-U_NP,              U_NP,              U_NA,              U_NA,              U_NA,              \
-U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
-
 #define MIRYOKU_LAYER_MEDIA \
 U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
 U_RGB_TOG,         U_RGB_EFF,         U_RGB_HUI,         U_RGB_SAI,         U_RGB_BRI,         \
