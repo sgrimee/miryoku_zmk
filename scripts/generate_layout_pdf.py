@@ -362,7 +362,7 @@ def parse_layer_access_from_base(base_definition: str) -> dict:
 
     # Now search for U_LT patterns in each key
     lt_pattern = r"U_LT\s*\(\s*U_(\w+)\s*,\s*([^)]+)\s*\)"
-    access_map = {}
+    access_map: dict[str, list[dict[str, str | int]]] = {}
 
     for idx, key_code in enumerate(keys_raw):
         match = re.match(lt_pattern, key_code)
