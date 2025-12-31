@@ -91,4 +91,10 @@ show:
 
 # Clean build artifacts
 clean:
-    rm -f result result-*
+	rm -f result result-*
+
+# Regenerate layer visualization PDF
+pdf:
+	@echo "Generating layer visualization PDF..."
+	uv run scripts/generate_layout_pdf.py
+	@echo "✓ PDF generated: layout.pdf"
