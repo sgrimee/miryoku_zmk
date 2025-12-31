@@ -413,7 +413,7 @@ def determine_position_name(index: int) -> str:
     return f"{hand}_row{row}_col{local_col}"
 
 
-def generate_access_text(layer_name: str, layer_access: dict, thumb_keys: dict) -> str:
+def generate_access_text(layer_name: str, layer_access: dict) -> str:
     """Generate access text for a layer based on how it's accessed from BASE.
 
     Examples:
@@ -426,7 +426,7 @@ def generate_access_text(layer_name: str, layer_access: dict, thumb_keys: dict) 
         return "→TAP from other layers"
 
     if layer_name not in layer_access:
-        return f"Access unknown"
+        return "Access unknown"
 
     access_info = layer_access[layer_name]
 
@@ -529,10 +529,10 @@ def create_page_groupings(layers: list[str]) -> list[list[str]]:
     preferred_first = ["TAP", "NUM", "SYM", "NAV"]
 
     # Build first page: preferred layers first (if they exist), in preferred order
-    page1 = [l for l in preferred_first if l in layers]
+    page1 = [layer for layer in preferred_first if layer in layers]
 
     # Fill remaining page1 slots with other layers (up to 4 total)
-    remaining = [l for l in layers if l not in page1]
+    remaining = [layer for layer in layers if layer not in page1]
     while len(page1) < 4 and remaining:
         page1.append(remaining.pop(0))
 
@@ -547,14 +547,13 @@ def create_page_groupings(layers: list[str]) -> list[list[str]]:
 
 
 def build_layer_data(
-    layer_name: str, keys: list[str | None], thumb_keys: dict, layer_access: dict
+    layer_name: str, keys: list[str | None], layer_access: dict
 ) -> dict:
     """Build the layer data structure for rendering.
 
     Args:
         layer_name: Name of the layer (e.g., "TAP", "NAV")
         keys: List of 40 translated key labels (with U_NP as None)
-        thumb_keys: Thumb key structure from extract_thumb_keys()
         layer_access: Access map from parse_layer_access_from_base()
 
     Returns:
@@ -577,23 +576,35 @@ def build_layer_data(
         [keys[25], keys[26], keys[27], keys[28], keys[29]],  # Row 2 right
     ]
 
+    # Extract this layer's thumb keys from its own keys array
+    # Indices: 32=left_combined, 33=left_outer, 34=left_inner
+    #          35=right_inner, 36=right_outer, 37=right_combined
+    layer_left_thumbs = {
+        "physical": [keys[33], keys[34]],  # left outer, left inner
+        "combined": keys[32],
+    }
+    layer_right_thumbs = {
+        "physical": [keys[35], keys[36]],  # right inner, right outer
+        "combined": keys[37],
+    }
+
     # Determine active thumbs
     active_thumbs = determine_active_thumb(layer_name, layer_access)
 
     # Generate access text
-    access_text = generate_access_text(layer_name, layer_access, thumb_keys)
+    access_text = generate_access_text(layer_name, layer_access)
 
     return {
         "left_hand": left_hand,
         "right_hand": right_hand,
         "left_thumbs": {
-            "physical": thumb_keys["left"]["physical"],
-            "combined": thumb_keys["left"]["combined"],
+            "physical": layer_left_thumbs["physical"],
+            "combined": layer_left_thumbs["combined"],
             "active": active_thumbs["left"],
         },
         "right_thumbs": {
-            "physical": thumb_keys["right"]["physical"],
-            "combined": thumb_keys["right"]["combined"],
+            "physical": layer_right_thumbs["physical"],
+            "combined": layer_right_thumbs["combined"],
             "active": active_thumbs["right"],
         },
         "access": access_text,
@@ -612,12 +623,16 @@ def draw_key(
         is_combined: True for combined thumb keys (red dashed border)
         is_inactive: True for grayed out keys (not relevant for current layer)
     """
+    # Normalize None to dash
+    if text is None:
+        text = "-"
+
     # Determine color based on key type
     if is_inactive:
         # Grayed out keys for positional awareness
         color = HexColor("#E8E8E8")  # Very light grey background
         text_color = HexColor("#AAAAAA")  # Grey text
-    elif text == "-" or text == "" or text is None:
+    elif text == "-" or text == "":
         color = HexColor("#CCCCCC")  # Light grey for empty
         text_color = HexColor("#999999")
         text = "-" if text is None else text
@@ -865,9 +880,7 @@ def main():
             )
             continue
 
-        layers[layer_name] = build_layer_data(
-            layer_name, keys, thumb_keys, layer_access
-        )
+        layers[layer_name] = build_layer_data(layer_name, keys, layer_access)
 
     if not layers:
         sys.exit("ERROR: No valid layers found to display")
