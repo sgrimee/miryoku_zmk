@@ -493,6 +493,59 @@ def determine_active_thumb(layer_name: str, layer_access: dict):
     return active
 
 
+def discover_layers(content: str) -> list[str]:
+    """Discover all MIRYOKU_LAYER_* definitions in the config file.
+
+    Returns layer names in the order they appear in the config file.
+    Excludes BASE and EXTRA (not displayed in PDF).
+
+    Returns:
+        List of layer names found in config (e.g., ["TAP", "NUM", "SYM", ...])
+    """
+    pattern = r"#define\s+MIRYOKU_LAYER_([A-Z_]+)\s"
+    matches = re.findall(pattern, content)
+
+    # Filter out BASE and EXTRA (these are not displayed)
+    excluded = {"BASE", "EXTRA"}
+    layers = [m for m in matches if m not in excluded]
+
+    return layers
+
+
+def create_page_groupings(layers: list[str]) -> list[list[str]]:
+    """Group layers into pages dynamically.
+
+    - First page gets up to 4 layers, preferring TAP, NUM, SYM, NAV if present
+    - Subsequent pages get up to 4 layers each
+    - Remaining layers fill in order of appearance in config
+
+    Args:
+        layers: List of layer names to group
+
+    Returns:
+        List of pages, where each page is a list of layer names
+        Example: [["TAP", "NUM", "SYM", "NAV"], ["BUTTON", "MEDIA", "FUN"]]
+    """
+    preferred_first = ["TAP", "NUM", "SYM", "NAV"]
+
+    # Build first page: preferred layers first (if they exist), in preferred order
+    page1 = [l for l in preferred_first if l in layers]
+
+    # Fill remaining page1 slots with other layers (up to 4 total)
+    remaining = [l for l in layers if l not in page1]
+    while len(page1) < 4 and remaining:
+        page1.append(remaining.pop(0))
+
+    # Build subsequent pages with remaining layers (4 per page)
+    pages = [page1] if page1 else []
+    while remaining:
+        page = remaining[:4]
+        remaining = remaining[4:]
+        pages.append(page)
+
+    return pages
+
+
 def build_layer_data(
     layer_name: str, keys: list[str | None], thumb_keys: dict, layer_access: dict
 ) -> dict:
@@ -767,8 +820,12 @@ def main():
     print(f"Reading config from {config_path}")
     content = parse_config_file(config_path)
 
-    # Layers to display (in order)
-    layers_to_display = ["TAP", "NUM", "SYM", "NAV", "BUTTON", "MEDIA", "FUN"]
+    # Discover layers from config file
+    layers_to_display = discover_layers(content)
+    print(f"Discovered layers: {layers_to_display}")
+
+    if not layers_to_display:
+        sys.exit("ERROR: No layers found in config (excluding BASE and EXTRA)")
 
     # Parse BASE layer for access information
     print("Parsing BASE layer for access information...")
@@ -777,15 +834,17 @@ def main():
         sys.exit("ERROR: Could not find MIRYOKU_LAYER_BASE in config")
     layer_access = parse_layer_access_from_base(base_def)
 
-    # Parse TAP layer for thumb key labels
-    print("Parsing TAP layer for thumb key labels...")
+    # Parse TAP layer for thumb key labels (fall back to BASE if TAP doesn't exist)
+    print("Parsing thumb key labels...")
     tap_def = extract_layer_definition(content, "TAP")
     if tap_def is None:
-        sys.exit("ERROR: Could not find MIRYOKU_LAYER_TAP in config")
+        print("  TAP layer not found, falling back to BASE layer for thumb keys")
+        tap_def = base_def
+
     tap_keys = parse_layer_keys(tap_def)
     if len(tap_keys) < 38:
         sys.exit(
-            f"ERROR: MIRYOKU_LAYER_TAP has {len(tap_keys)} keys, expected at least 38"
+            f"ERROR: Layer for thumb keys has {len(tap_keys)} keys, expected at least 38"
         )
     thumb_keys = extract_thumb_keys(tap_keys)
 
@@ -796,30 +855,31 @@ def main():
         print(f"  Processing layer: {layer_name}")
         layer_def = extract_layer_definition(content, layer_name)
         if layer_def is None:
-            sys.exit(f"ERROR: Could not find MIRYOKU_LAYER_{layer_name} in config")
+            print(f"  WARNING: Skipping {layer_name} - definition not found")
+            continue
 
         keys = parse_layer_keys(layer_def)
-        # Filter out None values (U_NP) for counting
-        keys_non_none = [k for k in keys if k is not None]
         if len(keys) < 30:  # At least 30 finger keys expected
-            sys.exit(
-                f"ERROR: MIRYOKU_LAYER_{layer_name} has {len(keys)} keys, expected at least 30"
+            print(
+                f"  WARNING: Skipping {layer_name} - has {len(keys)} keys, expected at least 30"
             )
+            continue
 
         layers[layer_name] = build_layer_data(
             layer_name, keys, thumb_keys, layer_access
         )
+
+    if not layers:
+        sys.exit("ERROR: No valid layers found to display")
 
     # Generate PDF
     print(f"Generating PDF: {pdf_path}")
     pdf = canvas.Canvas(str(pdf_path), pagesize=letter)
     width, height = letter
 
-    # Page groupings: Page 1 (4 layers), Page 2 (3 layers)
-    page_groupings = [
-        ["TAP", "NUM", "SYM", "NAV"],
-        ["BUTTON", "MEDIA", "FUN"],
-    ]
+    # Dynamically group layers into pages
+    page_groupings = create_page_groupings(list(layers.keys()))
+    print(f"Page groupings: {page_groupings}")
 
     total_pages = len(page_groupings)
 
@@ -843,12 +903,8 @@ def main():
             width - 1 * inch, height - 0.35 * inch, f"Page {page_num + 1}/{total_pages}"
         )
 
-        # Calculate section height based on number of layers on this page
-        layers_on_page = len(page_layers)
-        if layers_on_page == 4:
-            section_height = 2.25 * inch  # Tighter for 4 layers
-        else:
-            section_height = 3.0 * inch  # Standard for 3 layers
+        # Use consistent section height for all pages
+        section_height = 2.25 * inch  # Same height for all pages
 
         y_start = height - 0.85 * inch
 
