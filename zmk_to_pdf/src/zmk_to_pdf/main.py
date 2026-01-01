@@ -13,7 +13,6 @@ from .parser import (
     detect_keyboard_layout,
     discover_layers,
     extract_layer_definition,
-    extract_thumb_keys,
     parse_config_file,
     parse_layer_keys,
     parse_layer_access_from_base,
@@ -62,20 +61,6 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     all_layer_access = parse_layer_access_from_all_layers(
         content, layers_to_display, key_map, layout
     )
-
-    # Parse TAP layer for thumb key labels (fall back to BASE if TAP doesn't exist)
-    print("Parsing thumb key labels...")
-    tap_def = extract_layer_definition(content, "TAP")
-    if tap_def is None:
-        print("  TAP layer not found, falling back to BASE layer for thumb keys")
-        tap_def = base_def
-
-    tap_keys = parse_layer_keys(tap_def, key_map)
-    if len(tap_keys) < 38:
-        sys.exit(
-            f"ERROR: Layer for thumb keys has {len(tap_keys)} keys, expected at least 38"
-        )
-    thumb_keys = extract_thumb_keys(tap_keys)
 
     # Build layer data for each layer
     print("Building layer data...")
