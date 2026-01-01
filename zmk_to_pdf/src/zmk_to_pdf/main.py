@@ -9,6 +9,12 @@ from reportlab.pdfgen import canvas
 from .config import PDFConfig
 from .constants import MIN_FINGER_KEYS
 from .data_models import ParsedLayout
+from .exceptions import (
+    ConfigurationError,
+    LayerError,
+    FileNotFoundError,
+    InvalidArgumentError,
+)
 from .key_code_map import KeyCodeMap
 from .layer_processor import build_layer_data, create_page_groupings
 from .parser import (
@@ -70,7 +76,7 @@ def build_all_layers(
         )
 
     if not layers:
-        sys.exit("ERROR: No valid layers found to display")
+        raise LayerError("No valid layers found to display")
 
     return layers
 
@@ -106,13 +112,13 @@ def parse_layout_config(config_file: Path) -> ParsedLayout:
     print(f"Discovered layers: {layers_to_display}")
 
     if not layers_to_display:
-        sys.exit("ERROR: No layers found in config")
+        raise ConfigurationError("No layers found in config")
 
     # Parse BASE layer for access information
     print("Parsing BASE layer for access information...")
     base_def = extract_layer_definition(content, "BASE")
     if base_def is None:
-        sys.exit("ERROR: Could not find MIRYOKU_LAYER_BASE in config")
+        raise ConfigurationError("Could not find MIRYOKU_LAYER_BASE in config")
     layer_access = parse_layer_access_from_base(base_def, key_map, layout)
 
     # Parse all layers for &u_to_U_* patterns (multi-layer access)
@@ -213,21 +219,35 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
 
 def main() -> None:
     """Main entry point for PDF generation."""
-    # Check for command line arguments
-    if len(sys.argv) < 2:
-        sys.exit("Usage: python -m zmk_to_pdf <config_file> [output_pdf]")
+    try:
+        # Check for command line arguments
+        if len(sys.argv) < 2:
+            raise InvalidArgumentError(
+                "Usage: python -m zmk_to_pdf <config_file> [output_pdf]"
+            )
 
-    config_path = Path(sys.argv[1])
-    if not config_path.exists():
-        sys.exit(f"ERROR: Config file not found: {config_path}")
+        config_path = Path(sys.argv[1])
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    # Output PDF path - use second argument if provided, otherwise use current directory
-    if len(sys.argv) >= 3:
-        pdf_path = Path(sys.argv[2])
-    else:
-        pdf_path = Path.cwd() / "layout.pdf"
+        # Output PDF path - use second argument if provided, otherwise use current directory
+        if len(sys.argv) >= 3:
+            pdf_path = Path(sys.argv[2])
+        else:
+            pdf_path = Path.cwd() / "layout.pdf"
 
-    generate_pdf(config_path, pdf_path)
+        generate_pdf(config_path, pdf_path)
+    except (
+        ConfigurationError,
+        LayerError,
+        FileNotFoundError,
+        InvalidArgumentError,
+    ) as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"UNEXPECTED ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

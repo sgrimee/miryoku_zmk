@@ -154,10 +154,12 @@ class TestExtractThumbKeys:
     def test_insufficient_keys_exits(
         self, config_full: str, key_map: KeyCodeMap
     ) -> None:
-        """Test that insufficient keys cause exit."""
+        """Test that insufficient keys cause ConfigurationError."""
+        from zmk_to_pdf.exceptions import ConfigurationError
+
         # Create a too-short key list
         short_keys = ["A"] * 30
-        with pytest.raises(SystemExit):
+        with pytest.raises(ConfigurationError):
             extract_thumb_keys(short_keys)
 
 

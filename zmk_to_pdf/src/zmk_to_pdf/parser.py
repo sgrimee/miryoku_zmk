@@ -11,6 +11,7 @@ from .constants import (
     MIN_KEYS_FOR_THUMBS,
 )
 from .data_models import LayerAccessInfo, ThumbKeyLabelDict
+from .exceptions import ConfigurationError
 from .key_code_map import KeyCodeMap, translate_key_code
 
 
@@ -62,7 +63,7 @@ def parse_config_file(config_path: Path) -> str:
     try:
         return config_path.read_text(encoding="utf-8")
     except Exception as e:
-        sys.exit(f"ERROR: Could not read {config_path}: {e}")
+        raise ConfigurationError(f"Could not read {config_path}: {e}") from e
 
 
 def extract_layer_definition(content: str, layer_name: str) -> str | None:
@@ -141,8 +142,8 @@ def extract_thumb_keys(
         SystemExit: If layer has fewer than 38 keys
     """
     if len(tap_keys) < MIN_KEYS_FOR_THUMBS:
-        sys.exit(
-            f"ERROR: TAP layer has {len(tap_keys)} keys, expected at least {MIN_KEYS_FOR_THUMBS}"
+        raise ConfigurationError(
+            f"TAP layer has {len(tap_keys)} keys, expected at least {MIN_KEYS_FOR_THUMBS}"
         )
 
     # Extract thumb keys (indices 32-37)
