@@ -8,6 +8,7 @@ from reportlab.pdfgen import canvas
 
 from .config import PDFConfig
 from .constants import MIN_FINGER_KEYS
+from .data_models import ParsedLayout
 from .key_code_map import KeyCodeMap
 from .layer_processor import build_layer_data, create_page_groupings
 from .parser import (
@@ -22,12 +23,17 @@ from .parser import (
 from .pdf_renderer import PDFRenderer
 
 
-def generate_pdf(config_file: Path, output_pdf: Path) -> None:
-    """Generate PDF visualization from ZMK config file.
+def parse_layout_config(config_file: Path) -> ParsedLayout:
+    """Parse keyboard layout configuration from a config file.
+
+    Reads the config file, detects layout type, discovers layers, and parses
+    all layer definitions to build complete layer data for rendering.
 
     Args:
         config_file: Path to custom_config.h file
-        output_pdf: Path for output PDF file
+
+    Returns:
+        ParsedLayout object containing all parsed configuration data
 
     Raises:
         SystemExit: On configuration or parsing errors
@@ -87,6 +93,29 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     if not layers:
         sys.exit("ERROR: No valid layers found to display")
 
+    return ParsedLayout(
+        content=content,
+        layout=layout,
+        layers_to_display=layers_to_display,
+        layer_access=layer_access,
+        all_layer_access=all_layer_access,
+        layers=layers,
+    )
+
+
+def generate_pdf(config_file: Path, output_pdf: Path) -> None:
+    """Generate PDF visualization from ZMK config file.
+
+    Args:
+        config_file: Path to custom_config.h file
+        output_pdf: Path for output PDF file
+
+    Raises:
+        SystemExit: On configuration or parsing errors
+    """
+    # Parse layout configuration
+    parsed = parse_layout_config(config_file)
+
     # Generate PDF
     print(f"Generating PDF: {output_pdf}")
     pdf = canvas.Canvas(str(output_pdf), pagesize=letter)
@@ -97,7 +126,7 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     renderer = PDFRenderer(config)
 
     # Dynamically group layers into pages
-    page_groupings = create_page_groupings(list(layers.keys()))
+    page_groupings = create_page_groupings(list(parsed.layers.keys()))
     print(f"Page groupings: {page_groupings}")
 
     total_pages = len(page_groupings)
@@ -135,8 +164,8 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
         )
 
         for section_idx, layer_name in enumerate(page_layers):
-            if layer_name in layers:
-                layer_data = layers[layer_name]
+            if layer_name in parsed.layers:
+                layer_data = parsed.layers[layer_name]
                 section_height_inch = config.section_height * 72
                 y_offset = y_start - (section_idx * section_height_inch)
                 renderer.draw_layer_section(
