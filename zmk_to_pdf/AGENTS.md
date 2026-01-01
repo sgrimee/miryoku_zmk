@@ -4,10 +4,10 @@ This document provides guidance for agentic coding assistants working on the ZMK
 
 ## Project Overview
 
-**ZMK Layout PDF Generator** is a standalone Python tool that parses ZMK keyboard layout configuration files and generates visual PDF documentation. It reads `custom_config.h` files containing layer definitions and produces color-coded keyboard layout diagrams.
+**ZMK Layout PDF Generator** is a standalone Python tool that parses ZMK keyboard layout configuration files and generates visual PDF documentation. It reads `custom_config.h` files containing layer definitions and produces color-coded keyboard layout diagrams with layer access information.
 
 - **Language**: Python 3.11+
-- **Dependencies**: reportlab (PDF generation)
+- **Dependencies**: reportlab (PDF generation), pdf2image (optional, for testing)
 - **Package Manager**: uv (recommended) or pip
 - **Type Checking**: mypy with type hints throughout
 - **Code Quality**: ruff for linting and formatting
@@ -17,23 +17,41 @@ This document provides guidance for agentic coding assistants working on the ZMK
 ```
 zmk_to_pdf/
 ├── src/
-│   └── generate_layout_pdf.py    # Main script (all-in-one implementation)
-├── pyproject.toml                 # Project configuration and dependencies
-├── uv.lock                        # Locked dependency versions
-├── README.md                      # User documentation
-└── AGENTS.md                      # This file
+│   └── zmk_to_pdf/
+│       ├── __main__.py                 # CLI entry point
+│       ├── main.py                     # Main orchestration
+│       ├── config.py                   # PDF configuration and colors
+│       ├── parser.py                   # ZMK config file parsing
+│       ├── key_code_map.py            # Key code translation and colorization
+│       ├── layer_processor.py         # Layer data processing
+│       ├── data_models.py             # TypedDict data structures
+│       └── pdf_renderer.py            # PDF drawing and rendering
+├── tests/
+│   ├── fixtures/                       # Test data files
+│   ├── conftest.py                     # Pytest configuration
+│   ├── test_parser.py                  # Parser unit tests
+│   ├── test_key_code_map.py           # Key code translation tests
+│   ├── test_layer_processor.py        # Layer processing tests
+│   ├── test_pdf_renderer.py           # Renderer tests
+│   └── test_data_models.py            # Data structure tests
+├── pyproject.toml                      # Project configuration and dependencies
+├── uv.lock                             # Locked dependency versions
+├── README.md                           # User documentation
+├── AGENTS.md                           # This file
+└── justfile                            # Development recipes
+
 ```
 
 ## Build & Test Commands
 
-### Running the Script
+### Running the Tool
 
 ```bash
-# From zmk_to_pdf directory
-uv run python src/generate_layout_pdf.py <config_file> [output_pdf]
+# From zmk_to_pdf directory (module invocation)
+uv run python -m zmk_to_pdf <config_file> [output_pdf]
 
 # Example
-uv run python src/generate_layout_pdf.py ../miryoku/custom_config.h ../layout.pdf
+uv run python -m zmk_to_pdf ../miryoku/custom_config.h ../layout.pdf
 ```
 
 ### Development Setup
@@ -43,20 +61,27 @@ uv run python src/generate_layout_pdf.py ../miryoku/custom_config.h ../layout.pd
 uv sync --dev
 
 # Type checking
-uv run mypy src/generate_layout_pdf.py
+uv run mypy src/
 
-# Code formatting
-uv run ruff format src/
+# Code formatting and linting
+uv run ruff format src/ tests/
+uv run ruff check src/ tests/
 
-# Linting
-uv run ruff check src/
+# Run all tests
+uv run pytest tests/ -v
 ```
 
 ### Testing
 
 ```bash
-# Test with a real config file (if miryoku is in parent directory)
-uv run python src/generate_layout_pdf.py ../miryoku/custom_config.h test_output.pdf
+# Run specific test file
+uv run pytest tests/test_parser.py -v
+
+# Run with coverage
+uv run pytest tests/ --cov=src/zmk_to_pdf
+
+# Test with real config file (if miryoku is in parent directory)
+uv run python -m zmk_to_pdf ../miryoku/custom_config.h test_output.pdf
 
 # Verify PDF was created
 ls -lh test_output.pdf
@@ -66,14 +91,16 @@ ls -lh test_output.pdf
 
 ### File Organization
 
-The script is organized as a single-file implementation with clear sections:
+The project is organized into focused modules:
 
-1. **Constants** - `KEY_CODE_MAP` translation table
-2. **Data Models** - TypedDict and dataclass definitions
-3. **Key Colorizer** - Color determination logic
-4. **PDF Renderer** - Drawing and layout functions
-5. **Parsing Functions** - Config file parsing and layer extraction
-6. **Main Logic** - Entry point and orchestration
+1. **`__main__.py`** - CLI entry point and argument parsing
+2. **`main.py`** - High-level orchestration (generate_pdf function)
+3. **`config.py`** - PDFConfig dataclass with all configuration and colors
+4. **`data_models.py`** - TypedDict definitions for data structures
+5. **`parser.py`** - Config file parsing and layer extraction
+6. **`key_code_map.py`** - Key code translation and KeyColorizer logic
+7. **`layer_processor.py`** - Layer data processing and access detection
+8. **`pdf_renderer.py`** - PDF drawing and rendering logic
 
 ### Naming Conventions
 
@@ -90,11 +117,11 @@ The script is organized as a single-file implementation with clear sections:
 
 #### Variables
 - **Case**: snake_case
-- **Constants**: ALL_UPPERCASE for module-level constants (`KEY_CODE_MAP`)
+- **Constants**: ALL_UPPERCASE for module-level constants
 - **Type hints**: Required for all function signatures
 
 #### Key Code Constants
-- **Pattern**: `&kp X` format for ZMK key codes in `KEY_CODE_MAP`
+- **Pattern**: `&kp X` format for ZMK key codes in key_code_map.yaml
 - **Macro patterns**: `U_MT`, `U_LT`, `U_NP`, `U_NA`, etc.
 - **Layer references**: `&u_to_U_LAYERNAME` format
 
@@ -103,7 +130,7 @@ The script is organized as a single-file implementation with clear sections:
 **All functions must have complete type hints:**
 
 ```python
-def parse_layer_keys(definition: str) -> list[str | None]:
+def parse_layer_keys(definition: str, key_map: KeyCodeMap) -> list[str | None]:
     """Parse a layer definition into list of 40 key codes."""
     ...
 
@@ -136,20 +163,33 @@ def draw_key(
 #### Docstrings
 - **Style**: Google-style docstrings
 - **Required**: All public functions and classes
-- **Content**: Include Args, Returns, and examples where helpful
+- **Content**: Include Args, Returns, Raises, and examples where helpful
 
 Example:
 ```python
-def extract_thumb_keys(tap_keys: list[str | None]) -> dict[str, ThumbKeysDict]:
+def extract_thumb_keys(
+    tap_keys: list[str | None],
+) -> dict[str, ThumbKeyLabelDict]:
     """Extract thumb key labels from TAP layer.
 
     Thumb row is indices 30-39 (out of 40 total keys):
     [30, 31] = U_NP (None, not present)
     [32] = left_combined
-    ...
+    [33] = left_outer
+    [34] = left_inner
+    [35] = right_inner
+    [36] = right_outer
+    [37] = right_combined
+    [38, 39] = U_NP (None, not present)
+
+    Args:
+        tap_keys: List of 40+ key labels from TAP layer
 
     Returns:
         Dictionary with "left" and "right" thumb key structures
+
+    Raises:
+        SystemExit: If layer has fewer than 38 keys
     """
 ```
 
@@ -160,7 +200,7 @@ Use `sys.exit()` with clear error messages:
 
 ```python
 if len(sys.argv) < 2:
-    sys.exit("Usage: generate_layout_pdf.py <config_file> [output_pdf]")
+    sys.exit("Usage: python -m zmk_to_pdf <config_file> [output_pdf]")
 
 if not config_path.exists():
     sys.exit(f"ERROR: Config file not found: {config_path}")
@@ -174,7 +214,9 @@ if base_def is None:
     sys.exit("ERROR: Could not find MIRYOKU_LAYER_BASE in config")
 
 if len(tap_keys) < 38:
-    sys.exit(f"ERROR: TAP layer has {len(tap_keys)} keys, expected at least 38")
+    sys.exit(
+        f"ERROR: Layer for thumb keys has {len(tap_keys)} keys, expected at least 38"
+    )
 ```
 
 #### Warnings vs Errors
@@ -212,18 +254,31 @@ class PDFConfig:
 All colors in `PDFConfig` use hex strings:
 
 ```python
-color_navigation: str = "#90EE90"
-color_modifier: str = "#FFB6C1"
-color_system: str = "#F0E68C"
+color_navigation: str = "#90EE90"      # Light green
+color_modifier: str = "#FFB6C1"        # Light pink
+color_system: str = "#ADD8E6"          # Light blue
+color_access_key: str = "#F0E68C"      # Khaki/yellow
 ```
 
-#### Color Usage
+#### Color Usage in Code
 Convert to ReportLab colors with `HexColor()`:
 
 ```python
-bg_color = HexColor(self.config.color_navigation)
-pdf.setFillColor(bg_color)
+if is_access_key:
+    bg_color = HexColor(self.config.color_access_key)
+else:
+    bg_color, text_color = self.colorizer.get_colors(text, is_inactive)
 ```
+
+#### Color Semantics
+**Important**: Different colors have specific meanings:
+
+- `color_access_key` (#F0E68C): Thumb key used to enter this layer
+- `color_system` (#ADD8E6): System keys (BSPC, RET, DEL, etc.)
+- `color_navigation` (#90EE90): Arrow keys and navigation
+- `color_modifier` (#FFB6C1): Modifier keys (Ctrl, Alt, Shift, GUI)
+- `color_mouse_clipboard` (#87CEEB): Mouse buttons and clipboard operations
+- `color_layer_access` (#DDA0DD): Layer transition names
 
 ## Key Concepts
 
@@ -237,15 +292,26 @@ Each ZMK layer has **40 keys** (for Miryoku):
   - Indices 30-31, 38-39: `U_NP` (not present)
   - Indices 32-37: Actual thumb keys (combined + physical)
 
+### Thumb Key Layout
+
+```
+Left hand:                    Right hand:
+Col 3-4 (physical):          Col 0-1 (physical):
+[32] [33] [34]              [35] [36] [37]
+    \  /                       \  /
+   [combined]                 [combined]
+```
+
 ### Key Code Translation
 
-The `KEY_CODE_MAP` dictionary translates ZMK codes to display labels:
+The `KeyCodeMap` loads translations from YAML and translates ZMK codes to display labels:
 
-```python
-"&kp A": "A"
-"&kp LEFT": "←"
-"&u_to_U_NAV": "→NAV"
-"U_NP": None  # Filtered out
+```
+&kp A → "A"
+&kp LEFT → "←"
+&u_to_U_NAV → "→NAV"
+U_NP → None (filtered out)
+&kp BSPC → "BSPC"
 ```
 
 ### Macro Handling
@@ -260,57 +326,67 @@ Special handling for ZMK macros:
 
 The script analyzes the BASE layer to determine how other layers are accessed:
 
-1. Find all `U_LT(U_LAYERNAME, KEY)` patterns
-2. Map layer name to accessing key(s)
-3. Generate descriptive access text
-4. Highlight access keys in yellow on layer diagrams
+1. Find all `U_LT(U_LAYERNAME, KEY)` patterns in BASE layer
+2. Map layer name to accessing thumb key position and key name
+3. Generate position-only access text (e.g., "Access: left outer")
+4. Highlight access key in yellow on layer diagrams
+5. Highlight thumb keys as follows:
+   - Yellow: Access key (always exactly one per layer, or none for TAP)
+   - Light blue: System keys (BSPC, RET, DEL, etc.)
+   - Other colors: Navigation, modifiers, etc.
 
 ### PDF Layout
 
 **Coordinate system**: Bottom-left origin (ReportLab standard)
 
 **Structure**:
-- Title and legend at top
+- Title and legend at top (position-only, layout-agnostic)
 - Up to 4 layers per page
 - Each layer shows:
   - Left and right hand grids (3×5 keys each)
   - Physical thumb keys (2 per hand)
   - Combined thumb keys (1 per hand, red dashed border)
-  - Layer name and access information
+  - Layer name and access information (position-based)
 
 ## Common Tasks
 
 ### Adding Support for New Key Codes
 
-1. Add entry to `KEY_CODE_MAP`:
-   ```python
-   "&kp NEW_KEY": "LABEL",
+1. Add entry to `src/zmk_to_pdf/key_code_map.yaml`:
+   ```yaml
+   "&kp NEW_KEY": "LABEL"
    ```
 
-2. Optionally update `KeyColorizer.get_colors()` if special color needed:
+2. Optionally update `KeyColorizer.get_colors()` in `key_code_map.py` if special color needed:
    ```python
    if "SPECIAL" in text:
        return (HexColor(self.config.color_special), black)
    ```
 
+3. Add test case to `tests/test_key_code_map.py`
+
 ### Modifying PDF Layout
 
-1. Adjust dimensions in `PDFConfig` dataclass
-2. Update `draw_layer_section()` calculation logic if needed
-3. Test with `just pdf` from parent directory
+1. Adjust dimensions in `PDFConfig` dataclass in `config.py`
+2. Update `draw_layer_section()` calculation logic in `pdf_renderer.py` if needed
+3. Test with `uv run python -m zmk_to_pdf ../miryoku/custom_config.h test.pdf`
+4. Verify PDF visually
 
 ### Changing Color Scheme
 
-1. Update hex colors in `PDFConfig`
-2. Modify `KeyColorizer.get_colors()` logic if categorization changes
-3. Update README.md color legend
+1. Update hex colors in `PDFConfig` in `config.py`
+2. Modify `KeyColorizer.get_colors()` logic in `key_code_map.py` if categorization changes
+3. Update README.md color legend table
+4. Ensure `color_access_key` is used for access keys in `pdf_renderer.py`
+5. Test with real configuration
 
 ### Adding New Layer Information
 
-1. Define new TypedDict or extend `LayerData`
-2. Update parsing functions to extract data
-3. Update `draw_layer_section()` to render new information
-4. Add tests/examples
+1. Define new TypedDict or extend `LayerData` in `data_models.py`
+2. Update parsing functions in `parser.py` to extract data
+3. Update `build_layer_data()` in `layer_processor.py` to populate new fields
+4. Update `draw_layer_section()` in `pdf_renderer.py` to render new information
+5. Add tests in `tests/test_layer_processor.py`
 
 ### Debugging Parse Errors
 
@@ -322,7 +398,11 @@ print(f"  Processing layer: {layer_name}")
 print(f"Page groupings: {page_groupings}")
 ```
 
-Add more `print()` statements as needed during development.
+Add more `print()` statements as needed during development. Run with:
+
+```bash
+uv run python -m zmk_to_pdf <config> output.pdf 2>&1
+```
 
 ## Dependencies
 
@@ -332,11 +412,19 @@ Add more `print()` statements as needed during development.
   - Used for: Canvas, colors, drawing primitives
   - Key APIs: `canvas.Canvas`, `HexColor`, `letter` page size
 
+- **PyYAML** (≥6.0): YAML parsing for key code mappings
+  - Used for: Loading key_code_map.yaml
+
 ### Development Dependencies
 
 - **mypy** (≥1.19.1): Static type checker
 - **ruff** (≥0.14.10): Fast Python linter and formatter
+- **pytest** (≥8.0.0): Testing framework
 - **types-reportlab** (≥4.4.7.20251223): Type stubs for reportlab
+
+### Optional Dependencies
+
+- **pdf2image** (for testing/debugging): Convert PDF pages to images for visual inspection
 
 ### Python Version
 
@@ -345,12 +433,38 @@ Add more `print()` statements as needed during development.
 
 ## Testing Strategy
 
+### Unit Tests
+
+Located in `tests/` directory, using pytest:
+
+```bash
+uv run pytest tests/ -v
+```
+
+Test files:
+- `test_parser.py`: Layer parsing and extraction
+- `test_key_code_map.py`: Key code translation
+- `test_layer_processor.py`: Layer data processing
+- `test_pdf_renderer.py`: PDF rendering operations
+- `test_data_models.py`: Data structure validation
+
 ### Manual Testing
 
 1. **Valid input**: Test with known good `custom_config.h`
+   ```bash
+   uv run python -m zmk_to_pdf ../miryoku/custom_config.h output.pdf
+   ```
+
 2. **Missing layers**: Remove optional layers, verify graceful handling
+
 3. **Invalid syntax**: Test error messages for malformed input
+
 4. **Edge cases**: Unusual key combinations, long layer names
+
+5. **Visual inspection**: Open generated PDF and verify:
+   - Correct color assignments
+   - Yellow highlighting only on access keys
+   - Proper layer grouping and page layout
 
 ### Regression Testing
 
@@ -359,14 +473,14 @@ When making changes:
 1. Generate PDF with current version
 2. Make changes
 3. Generate PDF again
-4. Compare outputs visually or with diff tools
+4. Compare outputs visually or with PDF diff tools
 
 ### Type Checking
 
 Always run mypy before committing:
 
 ```bash
-uv run mypy src/generate_layout_pdf.py
+uv run mypy src/
 ```
 
 Should produce no errors or warnings.
@@ -402,7 +516,7 @@ This tool is designed to be **standalone and reusable**.
 3. **Call script**: 
    ```bash
    cd zmk_to_pdf
-   uv run python src/generate_layout_pdf.py /path/to/custom_config.h output.pdf
+   uv run python -m zmk_to_pdf /path/to/custom_config.h output.pdf
    ```
 
 ### Using from Build Scripts
@@ -411,32 +525,48 @@ Example justfile recipe:
 
 ```justfile
 pdf:
-    cd zmk_to_pdf && uv run python src/generate_layout_pdf.py ../config/custom_config.h ../layout.pdf
+    cd zmk_to_pdf && uv run python -m zmk_to_pdf ../miryoku/custom_config.h ../layout.pdf
 ```
 
 Example Makefile:
 
 ```makefile
-layout.pdf: config/custom_config.h
-    cd zmk_to_pdf && uv run python src/generate_layout_pdf.py ../$< ../$@
+layout.pdf: miryoku/custom_config.h
+    cd zmk_to_pdf && uv run python -m zmk_to_pdf ../$< ../$@
 ```
 
-## Versioning and Compatibility
+## Recent Changes and Important Notes
 
-### Semantic Versioning
+### Color Scheme Refinement (Recent)
 
-Follow semver (major.minor.patch):
-- **Major**: Breaking changes to command-line interface or output format
-- **Minor**: New features, new key code support
-- **Patch**: Bug fixes, documentation updates
+The color scheme was updated to provide clearer visual distinction:
 
-### Config File Compatibility
+**Before**: System keys (BSPC, RET, DEL) and access keys both used yellow (#F0E68C)
 
-The tool should handle:
-- Standard Miryoku layer definitions
-- Custom layer names
-- Missing optional layers (TAP, etc.)
-- Future ZMK key codes (fall back to raw code display)
+**After**: 
+- Access keys: Yellow (#F0E68C) - thumb key to enter the layer
+- System keys: Light blue (#ADD8E6) - functional system keys
+
+This prevents confusion where you couldn't tell which thumb key was the access key in layers like NAV.
+
+### Access Text Format (Recent)
+
+Access text is now position-based (not key-based) to be layout-agnostic:
+
+**Before**: "Hold SPACE (left outer)" - SPACE could change if user customizes BASE
+
+**After**: "Access: left outer" - position never changes
+
+This ensures consistency even when users customize their BASE layer configuration.
+
+### Modular Structure (Recent)
+
+The tool was refactored from a single monolithic file into organized modules:
+
+- Easier to test individual components
+- Clearer separation of concerns
+- Better type safety with TypedDict structures
+- Improved maintainability
 
 ## Known Limitations
 
@@ -444,6 +574,7 @@ The tool should handle:
 2. **No validation**: Doesn't validate ZMK syntax, just parses patterns
 3. **English only**: Labels and messages are in English
 4. **Single file output**: Generates one PDF file, not multiple formats
+5. **YAML key maps**: Requires key_code_map.yaml to be present (not editable via CLI)
 
 ## Future Enhancements
 
@@ -453,44 +584,49 @@ Potential improvements (not currently implemented):
 - SVG output in addition to PDF
 - Interactive HTML output
 - Configuration file for colors and layout
-- Unit tests with pytest
-- CI/CD with GitHub Actions
+- CLI options for customizing colors
+- Layered PDF annotations with layer-specific links
 
 ## Getting Help
 
 When working on this project:
 
-1. **Read the code**: Single-file implementation is well-documented
+1. **Read the code**: Modular structure with clear separation of concerns
 2. **Check README.md**: User-facing documentation
-3. **Run type checker**: `mypy` catches many issues
-4. **Test incrementally**: Make small changes and test often
-5. **Study examples**: Look at `KEY_CODE_MAP` and parsing patterns
+3. **Check AGENTS.md**: This file, with development guidance
+4. **Run type checker**: `uv run mypy src/` catches many issues
+5. **Run tests**: `uv run pytest tests/ -v` validates functionality
+6. **Test incrementally**: Make small changes and test often
 
 ## Best Practices
 
 ### When Adding Features
 
-1. Maintain single-file structure (easier to distribute)
+1. Maintain modular structure (separate concerns)
 2. Add type hints for all new functions
 3. Update docstrings with examples
-4. Add new key codes to `KEY_CODE_MAP`
-5. Update README.md with new capabilities
+4. Add new key codes to `key_code_map.yaml`
+5. Add corresponding tests
+6. Update README.md with new capabilities
+7. Run `mypy` and `ruff` before committing
 
 ### When Fixing Bugs
 
-1. Identify minimal reproduction case
-2. Add debug output if needed
-3. Fix the root cause, not symptoms
-4. Test with original failing case
-5. Remove debug output before committing
+1. Write a test that reproduces the bug
+2. Identify root cause (not symptoms)
+3. Fix the root cause
+4. Ensure test passes
+5. Run full test suite
+6. Remove debug output before committing
 
 ### When Refactoring
 
 1. Keep the command-line interface stable
 2. Maintain backward compatibility with config files
 3. Run type checker after changes
-4. Verify PDF output looks correct
-5. Update documentation if behavior changes
+4. Run full test suite
+5. Verify PDF output looks correct
+6. Update documentation if behavior changes
 
 ## Code Review Checklist
 
@@ -500,9 +636,11 @@ Before considering changes complete:
 - [ ] Docstrings added to all public functions
 - [ ] Error messages are clear and actionable
 - [ ] Code follows snake_case naming
-- [ ] `mypy` passes with no errors
-- [ ] `ruff format` applied to code
-- [ ] `ruff check` passes with no errors
+- [ ] `mypy src/` passes with no errors
+- [ ] `ruff format src/` applied to code
+- [ ] `ruff check src/` passes with no errors
+- [ ] `pytest tests/` passes with all tests
 - [ ] Manual test with real config file succeeds
+- [ ] Color logic verified (access vs system keys)
 - [ ] README.md updated if user-facing changes
 - [ ] AGENTS.md updated if development process changes
