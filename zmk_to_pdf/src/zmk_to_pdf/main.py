@@ -1,5 +1,6 @@
 """Main orchestration for ZMK Layout PDF generation."""
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -220,21 +221,31 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
 def main() -> None:
     """Main entry point for PDF generation."""
     try:
-        # Check for command line arguments
-        if len(sys.argv) < 2:
-            raise InvalidArgumentError(
-                "Usage: python -m zmk_to_pdf <config_file> [output_pdf]"
-            )
+        # Parse command line arguments
+        parser = argparse.ArgumentParser(
+            description="Generate PDF visualization from ZMK keyboard configuration"
+        )
+        parser.add_argument(
+            "config_file",
+            type=Path,
+            help="Path to custom_config.h file",
+        )
+        parser.add_argument(
+            "-o",
+            "--output",
+            type=Path,
+            default=None,
+            help="Output PDF file path (default: layout.pdf in current directory)",
+        )
+        args = parser.parse_args()
 
-        config_path = Path(sys.argv[1])
+        # Validate config file exists
+        config_path = args.config_file
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-        # Output PDF path - use second argument if provided, otherwise use current directory
-        if len(sys.argv) >= 3:
-            pdf_path = Path(sys.argv[2])
-        else:
-            pdf_path = Path.cwd() / "layout.pdf"
+        # Determine output path
+        pdf_path = args.output if args.output else Path.cwd() / "layout.pdf"
 
         generate_pdf(config_path, pdf_path)
     except (
