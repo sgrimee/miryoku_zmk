@@ -66,3 +66,19 @@ class ThumbKeyLabelDict(TypedDict):
 
     physical: list[str | None]
     combined: str | None
+
+
+@dataclass
+class ParsedLayout:
+    """Complete parsed keyboard layout configuration.
+
+    This dataclass contains all data extracted and computed from a keyboard
+    configuration file, ready for rendering to PDF.
+    """
+
+    content: str  # Raw config file content
+    layout: str  # Detected layout type ("34key", "36key", "40key", or "unknown")
+    layers_to_display: list[str]  # Layer names to display in PDF
+    layer_access: dict  # Access info from BASE layer (layer -> LayerAccessInfo)
+    all_layer_access: dict  # Multi-layer access patterns (layer -> access info)
+    layers: dict[str, LayerData]  # Complete layer data for each displayed layer

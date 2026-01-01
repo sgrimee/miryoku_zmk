@@ -3,6 +3,7 @@
 from zmk_to_pdf.data_models import (
     LayerAccessInfo,
     LayerData,
+    ParsedLayout,
     ThumbKeysActive,
     ThumbKeysDict,
 )
@@ -108,3 +109,82 @@ class TestLayerData:
         }
         assert layer_data["left_hand"][0][0] is None
         assert layer_data["left_hand"][0][1] == "A"
+
+
+class TestParsedLayout:
+    """Test ParsedLayout dataclass."""
+
+    def test_create_parsed_layout(self, sample_layer_data: LayerData) -> None:
+        """Test creating a ParsedLayout."""
+        parsed = ParsedLayout(
+            content="config content",
+            layout="40key",
+            layers_to_display=["BASE", "NAV"],
+            layer_access={
+                "BASE": {
+                    "position": "left_inner",
+                    "key": "TAB",
+                    "index": 34,
+                    "source_layer": None,
+                }
+            },
+            all_layer_access={},
+            layers={"BASE": sample_layer_data},
+        )
+
+        assert parsed.content == "config content"
+        assert parsed.layout == "40key"
+        assert parsed.layers_to_display == ["BASE", "NAV"]
+        assert "BASE" in parsed.layer_access
+        assert "BASE" in parsed.layers
+
+    def test_parsed_layout_with_multiple_layers(
+        self, sample_layer_data: LayerData
+    ) -> None:
+        """Test ParsedLayout with multiple layers."""
+        parsed = ParsedLayout(
+            content="config content",
+            layout="36key",
+            layers_to_display=["BASE", "NAV", "SYM", "NUM"],
+            layer_access={},
+            all_layer_access={
+                "NAV": {
+                    "position": "left_combined",
+                    "key": "X",
+                    "index": 30,
+                    "source_layer": "BASE",
+                },
+                "SYM": {
+                    "position": "right_combined",
+                    "key": "Y",
+                    "index": 32,
+                    "source_layer": "BASE",
+                },
+            },
+            layers={
+                "BASE": sample_layer_data,
+                "NAV": sample_layer_data,
+                "SYM": sample_layer_data,
+                "NUM": sample_layer_data,
+            },
+        )
+
+        assert parsed.layout == "36key"
+        assert len(parsed.layers_to_display) == 4
+        assert len(parsed.layers) == 4
+        assert len(parsed.all_layer_access) == 2
+
+    def test_parsed_layout_with_unknown_layout(
+        self, sample_layer_data: LayerData
+    ) -> None:
+        """Test ParsedLayout with unknown layout type."""
+        parsed = ParsedLayout(
+            content="config content",
+            layout="unknown",
+            layers_to_display=["BASE"],
+            layer_access={},
+            all_layer_access={},
+            layers={"BASE": sample_layer_data},
+        )
+
+        assert parsed.layout == "unknown"
