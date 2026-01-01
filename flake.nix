@@ -23,7 +23,7 @@
           ];
           board = "nice_nano";
           shield = "splitkb_aurora_sweep_%PART%";
-          enableZmkStudio = true;
+          enableZmkStudio = false;
           inherit zephyrDepsHash;
           extraCmakeFlags = [ "-DCONFIG_BUILD_OUTPUT_HEX=y" ];
           installPhase = ''

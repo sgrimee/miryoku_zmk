@@ -82,7 +82,7 @@ flash-right:
     fi
 
 # Flash settings reset firmware via DFU serial (macOS)
-flash-erase:
+flash-reset:
     @if [[ "$(uname)" == "Darwin" ]]; then \
         echo "Flashing settings reset firmware via DFU serial (macOS)..."; \
         echo ""; \
