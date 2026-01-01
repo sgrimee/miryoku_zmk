@@ -1,16 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "zmk-layout-pdf"
+name = "zmk_to_pdf"
 version = "0.1.0"
 description = "Generate PDF visualizations of ZMK keyboard layouts from custom_config.h files"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "reportlab>=4.0.0",
+    "pyyaml>=6.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/zmk_to_pdf"]
 
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
     "ruff>=0.14.10",
     "types-reportlab>=4.4.7.20251223",
+    "types-PyYAML>=6.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.12.0",
 ]

@@ -1,0 +1,249 @@
+"""Configuration file parsing for ZMK custom_config.h files."""
+
+import re
+import sys
+from pathlib import Path
+
+from .data_models import LayerAccessInfo, ThumbKeyLabelDict
+from .key_code_map import KeyCodeMap, translate_key_code
+
+
+def parse_config_file(config_path: Path) -> str:
+    """Read config file and return content.
+
+    Args:
+        config_path: Path to custom_config.h file
+
+    Returns:
+        File content as string
+
+    Raises:
+        SystemExit: If file cannot be read
+    """
+    try:
+        return config_path.read_text(encoding="utf-8")
+    except Exception as e:
+        sys.exit(f"ERROR: Could not read {config_path}: {e}")
+
+
+def extract_layer_definition(content: str, layer_name: str) -> str | None:
+    """Extract the key definition for MIRYOKU_LAYER_{layer_name}.
+
+    Returns the full definition with line continuations joined, or None if not found.
+
+    Args:
+        content: File content to search
+        layer_name: Layer name (e.g., "BASE", "NAV")
+
+    Returns:
+        Layer definition string or None if not found
+    """
+    # Match #define MIRYOKU_LAYER_{NAME} \ ... up to next non-continuation line
+    pattern = rf"#define\s+MIRYOKU_LAYER_{layer_name}\s+(.+?)(?=\n#define|\n\n|\Z)"
+    match = re.search(pattern, content, re.DOTALL | re.MULTILINE)
+
+    if not match:
+        return None
+
+    # Get the definition text
+    definition = match.group(1)
+
+    # Join line continuations (remove backslashes and newlines)
+    definition = re.sub(r"\\\s*\n\s*", " ", definition)
+    # Remove extra whitespace
+    definition = re.sub(r"\s+", " ", definition)
+
+    return definition.strip()
+
+
+def parse_layer_keys(definition: str, key_map: KeyCodeMap) -> list[str | None]:
+    """Parse a layer definition into list of key codes.
+
+    Returns list of translated key labels (U_NP filtered out as None).
+
+    Args:
+        definition: Layer definition string
+        key_map: KeyCodeMap for translation
+
+    Returns:
+        List of translated key labels
+    """
+    # Split by comma
+    keys_raw = [k.strip() for k in definition.split(",")]
+
+    # Translate each key (include empty keys as None)
+    keys = [translate_key_code(k, key_map) if k else None for k in keys_raw]
+
+    return keys
+
+
+def extract_thumb_keys(
+    tap_keys: list[str | None],
+) -> dict[str, ThumbKeyLabelDict]:
+    """Extract thumb key labels from TAP layer.
+
+    Thumb row is indices 30-39 (out of 40 total keys):
+    [30, 31] = U_NP (None, not present)
+    [32] = left_combined
+    [33] = left_outer
+    [34] = left_inner
+    [35] = right_inner
+    [36] = right_outer
+    [37] = right_combined
+    [38, 39] = U_NP (None, not present)
+
+    Args:
+        tap_keys: List of 40+ key labels from TAP layer
+
+    Returns:
+        Dictionary with "left" and "right" thumb key structures
+
+    Raises:
+        SystemExit: If layer has fewer than 38 keys
+    """
+    if len(tap_keys) < 38:
+        sys.exit(f"ERROR: TAP layer has {len(tap_keys)} keys, expected at least 38")
+
+    # Extract thumb keys (indices 32-37)
+    left_combined = tap_keys[32]
+    left_outer = tap_keys[33]
+    left_inner = tap_keys[34]
+    right_inner = tap_keys[35]
+    right_outer = tap_keys[36]
+    right_combined = tap_keys[37]
+
+    return {
+        "left": ThumbKeyLabelDict(
+            physical=[left_outer, left_inner],
+            combined=left_combined,
+        ),
+        "right": ThumbKeyLabelDict(
+            physical=[right_inner, right_outer],
+            combined=right_combined,
+        ),
+    }
+
+
+def parse_layer_access_from_base(
+    base_definition: str, key_map: KeyCodeMap
+) -> dict[str, list[LayerAccessInfo]]:
+    """Parse BASE layer to determine which key accesses which layer.
+
+    Looks for U_LT(U_LAYERNAME, KEY) patterns.
+
+    Args:
+        base_definition: Layer definition string for BASE layer
+        key_map: KeyCodeMap for key translation
+
+    Returns:
+        Dictionary mapping layer names to list of access info
+    """
+    # First, properly parse all keys to get correct indices
+    # Split by comma, but need to handle nested commas in macros
+    keys_raw = []
+    current_key = ""
+    paren_depth = 0
+
+    for char in base_definition:
+        if char == "(":
+            paren_depth += 1
+            current_key += char
+        elif char == ")":
+            paren_depth -= 1
+            current_key += char
+        elif char == "," and paren_depth == 0:
+            # Top-level comma - end of key
+            if current_key.strip():
+                keys_raw.append(current_key.strip())
+            current_key = ""
+        else:
+            current_key += char
+
+    # Don't forget the last key
+    if current_key.strip():
+        keys_raw.append(current_key.strip())
+
+    # Now search for U_LT patterns in each key
+    lt_pattern = r"U_LT\s*\(\s*U_(\w+)\s*,\s*([^)]+)\s*\)"
+    access_map: dict[str, list[LayerAccessInfo]] = {}
+
+    for idx, key_code in enumerate(keys_raw):
+        match = re.match(lt_pattern, key_code)
+        if match:
+            layer_name = match.group(1)
+            key_name = match.group(2).strip()
+
+            # Translate the key name
+            if key_name.startswith("&kp"):
+                translated_key = translate_key_code(key_name, key_map)
+            else:
+                translated_key = translate_key_code(f"&kp {key_name}", key_map)
+
+            # Determine position name
+            position = determine_position_name(idx)
+
+            # Add to access map
+            if layer_name not in access_map:
+                access_map[layer_name] = []
+
+            access_map[layer_name].append(
+                {
+                    "position": position,
+                    "key": translated_key or key_name,
+                    "index": idx,
+                }
+            )
+
+    return access_map
+
+
+def determine_position_name(index: int) -> str:
+    """Determine the position name for a key index (0-39).
+
+    Args:
+        index: Key index (0-39)
+
+    Returns:
+        Position name (e.g., "left_row0_col0", "left_inner")
+    """
+    # Thumb row (indices 30-39)
+    if 30 <= index <= 39:
+        thumb_positions = {
+            32: "left_combined",
+            33: "left_outer",
+            34: "left_inner",
+            35: "right_inner",
+            36: "right_outer",
+            37: "right_combined",
+        }
+        return thumb_positions.get(index, f"thumb_{index}")
+
+    # Finger keys (indices 0-29)
+    row = index // 10
+    col = index % 10
+    hand = "left" if col < 5 else "right"
+    local_col = col if col < 5 else col - 5
+
+    return f"{hand}_row{row}_col{local_col}"
+
+
+def discover_layers(content: str) -> list[str]:
+    """Discover all MIRYOKU_LAYER_* definitions in the config file.
+
+    Returns layer names in the order they appear in the config file.
+    Excludes BASE and EXTRA (not displayed in PDF).
+
+    Args:
+        content: File content to search
+
+    Returns:
+        List of layer names found in config (e.g., ["TAP", "NUM", "SYM", ...])
+    """
+    pattern = r"#define\s+MIRYOKU_LAYER_([A-Z_]+)\s"
+    matches = re.findall(pattern, content)
+
+    # Filter out BASE and EXTRA (these are not displayed)
+    excluded = {"BASE", "EXTRA"}
+    layers = [m for m in matches if m not in excluded]
+
+    return layers

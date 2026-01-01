@@ -1,0 +1,28 @@
+# Python build artifacts
+*.egg-info/
+*.egg
+*.whl
+dist/
+build/
+
+# Test artifacts
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Output files
+test_output.pdf
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+__pycache__/

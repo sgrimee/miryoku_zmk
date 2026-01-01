@@ -1,0 +1,43 @@
+# ZMK Layout PDF Generator development commands
+
+set shell := ["bash", "-c"]
+
+# List all available recipes
+default:
+    @just --list --justfile {{justfile()}}
+
+# Run tests
+test:
+    @echo "Running tests..."
+    uv run pytest tests/ -v
+
+# Run tests with coverage report
+test-cov:
+    @echo "Running tests with coverage..."
+    uv run pytest tests/ --cov=src --cov-report=html --cov-report=term
+    @echo "Coverage report: htmlcov/index.html"
+
+# Lint code
+lint:
+    @echo "Linting code..."
+    uv run ruff check src/ tests/
+
+# Format code
+fmt:
+    @echo "Formatting code..."
+    uv run ruff format src/ tests/
+
+# Type check code
+type:
+    @echo "Type checking code..."
+    uv run mypy src/
+
+# Run all quality checks
+qa: fmt lint type test
+    @echo "✓ All quality checks passed!"
+
+# Generate PDF from test config
+pdf-test:
+    @echo "Generating test PDF..."
+    uv run python -m zmk_to_pdf tests/fixtures/custom_config_full.h test_output.pdf
+    @echo "✓ Test PDF generated: test_output.pdf"
