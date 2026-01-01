@@ -2,10 +2,13 @@
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import yaml
 from reportlab.lib.colors import Color, HexColor, black
+
+if TYPE_CHECKING:
+    from .config import PDFConfig
 
 
 class KeyCodeMap:
@@ -55,7 +58,7 @@ class KeyCodeMap:
 class KeyColorizer:
     """Determines colors for keys based on their function."""
 
-    def __init__(self, config: Any) -> None:
+    def __init__(self, config: "PDFConfig") -> None:
         """Initialize with color configuration.
 
         Args:
