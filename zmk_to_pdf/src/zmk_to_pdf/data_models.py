@@ -1,6 +1,30 @@
 """Data structures and type definitions for ZMK Layout PDF Generator."""
 
+from dataclasses import dataclass
 from typing import TypedDict
+
+
+@dataclass
+class LayoutDimensions:
+    """Calculated dimensions for keyboard layout rendering.
+
+    All dimensions are in inches. This dataclass encapsulates all the
+    geometric calculations needed to position keys on the PDF.
+    """
+
+    key_width: float
+    key_height: float
+    key_spacing: float
+    hand_gap: float
+    thumb_spacing: float
+    hand_width: float
+    total_width: float
+    left_hand_x: float
+    right_hand_x: float
+    keys_start_y: float
+    first_row_y: float
+    physical_thumb_y: float
+    combined_thumb_y: float
 
 
 class ThumbKeysDict(TypedDict):

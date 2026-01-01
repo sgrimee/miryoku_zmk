@@ -3,8 +3,10 @@
 import pytest
 from pathlib import Path
 from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
 
 from zmk_to_pdf.config import PDFConfig
+from zmk_to_pdf.data_models import LayoutDimensions
 from zmk_to_pdf.pdf_renderer import PDFRenderer
 
 
@@ -16,6 +18,49 @@ class TestPDFRenderer:
         renderer = PDFRenderer(pdf_config)
         assert renderer.config == pdf_config
         assert renderer.colorizer is not None
+
+    def test_calculate_layout_dimensions(self, pdf_config: PDFConfig) -> None:
+        """Test calculating layout dimensions."""
+        from reportlab.lib.pagesizes import letter
+
+        renderer = PDFRenderer(pdf_config)
+        width, height = letter
+        y_offset = height / 2
+
+        dims = renderer.calculate_layout_dimensions(y_offset, width)
+
+        # Verify it returns a LayoutDimensions object
+        assert isinstance(dims, LayoutDimensions)
+
+        # Verify all expected attributes exist and have positive values
+        assert dims.key_width > 0
+        assert dims.key_height > 0
+        assert dims.key_spacing >= 0
+        assert dims.hand_gap > 0
+        assert dims.thumb_spacing > 0
+        assert dims.hand_width > 0
+        assert dims.total_width > 0
+
+        # Verify positioning makes sense
+        assert dims.left_hand_x >= 0
+        assert dims.right_hand_x > dims.left_hand_x
+        assert dims.first_row_y > dims.physical_thumb_y
+        assert dims.physical_thumb_y > dims.combined_thumb_y
+
+        # Verify hand width matches configuration (5 keys + 4 gaps)
+        expected_hand_width = (
+            5 * pdf_config.key_width * inch + 4 * pdf_config.key_spacing * inch
+        )
+        assert abs(dims.hand_width - expected_hand_width) < 0.01
+
+        # Verify total width includes both hands and gap
+        expected_total_width = 2 * dims.hand_width + dims.hand_gap
+        assert abs(dims.total_width - expected_total_width) < 0.01
+
+        # Verify hands are centered on the page
+        left_margin = dims.left_hand_x
+        right_margin = width - (dims.right_hand_x + dims.hand_width)
+        assert abs(left_margin - right_margin) < 1  # Should be roughly symmetric
 
     def test_draw_key_creates_canvas_calls(
         self, pdf_config: PDFConfig, tmp_path: Path
