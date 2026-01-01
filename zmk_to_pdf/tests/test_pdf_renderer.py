@@ -62,6 +62,44 @@ class TestPDFRenderer:
         right_margin = width - (dims.right_hand_x + dims.hand_width)
         assert abs(left_margin - right_margin) < 1  # Should be roughly symmetric
 
+    def test_draw_finger_keys(self, pdf_config: PDFConfig, tmp_path: Path) -> None:
+        """Test drawing finger keys for a hand."""
+        renderer = PDFRenderer(pdf_config)
+        pdf_path = tmp_path / "test_finger_keys.pdf"
+        pdf = canvas.Canvas(str(pdf_path))
+
+        # Create sample finger keys (3 rows x 5 columns)
+        finger_keys = [
+            ["Q", "W", "E", "R", "T"],
+            ["A", "S", "D", "F", "G"],
+            ["Z", "X", "C", "V", "B"],
+        ]
+
+        # Create dummy layout dimensions
+        dims = LayoutDimensions(
+            key_width=0.5,
+            key_height=0.5,
+            key_spacing=0.1,
+            hand_gap=0.3,
+            thumb_spacing=0.15,
+            hand_width=3.0,
+            total_width=6.3,
+            left_hand_x=0.5,
+            right_hand_x=3.8,
+            keys_start_y=7.0,
+            first_row_y=7.0,
+            physical_thumb_y=5.5,
+            combined_thumb_y=4.85,
+        )
+
+        # Draw finger keys
+        renderer._draw_finger_keys(pdf, finger_keys, dims, dims.left_hand_x)
+
+        pdf.showPage()
+        pdf.save()
+
+        assert pdf_path.exists()
+
     def test_draw_key_creates_canvas_calls(
         self, pdf_config: PDFConfig, tmp_path: Path
     ) -> None:

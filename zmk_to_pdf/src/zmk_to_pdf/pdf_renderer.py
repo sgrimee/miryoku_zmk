@@ -138,6 +138,27 @@ class PDFRenderer:
         text_y = y + (key_height_inch - self.config.key_font_size) / 2
         pdf.drawString(text_x, text_y, text)
 
+    def _draw_finger_keys(
+        self,
+        pdf: canvas.Canvas,
+        hand_keys: list[list[str | None]],
+        dims: LayoutDimensions,
+        hand_x: float,
+    ) -> None:
+        """Draw finger keys (3 rows of 5 keys) for one hand.
+
+        Args:
+            pdf: Canvas to draw on
+            hand_keys: 3x5 grid of key labels for this hand
+            dims: Layout dimensions for positioning
+            hand_x: X coordinate of the leftmost key for this hand
+        """
+        for row_idx, row in enumerate(hand_keys):
+            y = dims.first_row_y - (row_idx * (dims.key_height + dims.key_spacing))
+            for col_idx, key in enumerate(row):
+                x = hand_x + col_idx * (dims.key_width + dims.key_spacing)
+                self.draw_key(pdf, x, y, key)
+
     def draw_layer_section(
         self,
         pdf: canvas.Canvas,
@@ -190,11 +211,7 @@ class PDFRenderer:
         pdf.setFillColor(black)
 
         # Draw left hand regular keys (3 rows of 5 keys)
-        for row_idx, row in enumerate(left_hand):
-            y = dims.first_row_y - (row_idx * (dims.key_height + dims.key_spacing))
-            for col_idx, key in enumerate(row):
-                x = dims.left_hand_x + col_idx * (dims.key_width + dims.key_spacing)
-                self.draw_key(pdf, x, y, key)
+        self._draw_finger_keys(pdf, left_hand, dims, dims.left_hand_x)
 
         # Draw left hand thumb keys
         left_thumbs = layer_data["left_thumbs"]
@@ -241,11 +258,7 @@ class PDFRenderer:
         )
 
         # Draw right hand regular keys (3 rows of 5 keys)
-        for row_idx, row in enumerate(right_hand):
-            y = dims.first_row_y - (row_idx * (dims.key_height + dims.key_spacing))
-            for col_idx, key in enumerate(row):
-                x = dims.right_hand_x + col_idx * (dims.key_width + dims.key_spacing)
-                self.draw_key(pdf, x, y, key)
+        self._draw_finger_keys(pdf, right_hand, dims, dims.right_hand_x)
 
         # Draw right hand thumb keys
         right_thumbs = layer_data["right_thumbs"]
