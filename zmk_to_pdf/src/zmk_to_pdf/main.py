@@ -23,6 +23,58 @@ from .parser import (
 from .pdf_renderer import PDFRenderer
 
 
+def build_all_layers(
+    content: str,
+    layers_to_display: list[str],
+    layer_access: dict,
+    all_layer_access: dict,
+) -> dict:
+    """Build layer data for all layers to display.
+
+    Extracts layer definitions from config content, parses keys, validates
+    layer has sufficient keys, and builds complete layer data structure for
+    each layer.
+
+    Args:
+        content: Raw config file content
+        layers_to_display: List of layer names to process
+        layer_access: Access information from BASE layer
+        all_layer_access: Multi-layer access patterns
+
+    Returns:
+        Dictionary mapping layer names to LayerData objects
+
+    Raises:
+        SystemExit: If no valid layers can be built
+    """
+    key_map = KeyCodeMap()
+    layers = {}
+
+    print("Building layer data...")
+    for layer_name in layers_to_display:
+        print(f"  Processing layer: {layer_name}")
+        layer_def = extract_layer_definition(content, layer_name)
+        if layer_def is None:
+            print(f"  WARNING: Skipping {layer_name} - definition not found")
+            continue
+
+        keys = parse_layer_keys(layer_def, key_map)
+        if len(keys) < MIN_FINGER_KEYS:
+            print(
+                f"  WARNING: Skipping {layer_name} - has {len(keys)} keys, expected at least {MIN_FINGER_KEYS}"
+            )
+            continue
+
+        layers[layer_name] = build_layer_data(
+            layer_name, keys, layer_access, all_layer_access
+        )
+
+    if not layers:
+        sys.exit("ERROR: No valid layers found to display")
+
+    return layers
+
+
 def parse_layout_config(config_file: Path) -> ParsedLayout:
     """Parse keyboard layout configuration from a config file.
 
@@ -70,28 +122,9 @@ def parse_layout_config(config_file: Path) -> ParsedLayout:
     )
 
     # Build layer data for each layer
-    print("Building layer data...")
-    layers = {}
-    for layer_name in layers_to_display:
-        print(f"  Processing layer: {layer_name}")
-        layer_def = extract_layer_definition(content, layer_name)
-        if layer_def is None:
-            print(f"  WARNING: Skipping {layer_name} - definition not found")
-            continue
-
-        keys = parse_layer_keys(layer_def, key_map)
-        if len(keys) < MIN_FINGER_KEYS:
-            print(
-                f"  WARNING: Skipping {layer_name} - has {len(keys)} keys, expected at least {MIN_FINGER_KEYS}"
-            )
-            continue
-
-        layers[layer_name] = build_layer_data(
-            layer_name, keys, layer_access, all_layer_access
-        )
-
-    if not layers:
-        sys.exit("ERROR: No valid layers found to display")
+    layers = build_all_layers(
+        content, layers_to_display, layer_access, all_layer_access
+    )
 
     return ParsedLayout(
         content=content,
