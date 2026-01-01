@@ -5,7 +5,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
 from .config import PDFConfig
-from .data_models import LayerData, LayoutDimensions
+from .data_models import LayerData, LayoutDimensions, ThumbKeysActive
 from .key_code_map import KeyColorizer
 
 
@@ -159,6 +159,63 @@ class PDFRenderer:
                 x = hand_x + col_idx * (dims.key_width + dims.key_spacing)
                 self.draw_key(pdf, x, y, key)
 
+    def _draw_thumb_cluster(
+        self,
+        pdf: canvas.Canvas,
+        thumbs: ThumbKeysActive,
+        dims: LayoutDimensions,
+        hand_x: float,
+        is_left_hand: bool,
+    ) -> None:
+        """Draw thumb keys cluster (physical + combined) for one hand.
+
+        Args:
+            pdf: Canvas to draw on
+            thumbs: Thumb key structure with 'physical', 'combined', and 'active' keys
+            dims: Layout dimensions for positioning
+            hand_x: X coordinate of the leftmost key for this hand
+            is_left_hand: True for left hand (columns 3-4), False for right hand (columns 0-1)
+        """
+        active = thumbs.get("active")
+
+        # Determine column offsets based on hand
+        if is_left_hand:
+            physical_col_offsets = [3, 4]  # Columns 3 and 4
+            combined_col_offset = 3.5  # Centered between 3 and 4
+        else:
+            physical_col_offsets = [0, 1]  # Columns 0 and 1
+            combined_col_offset = 0.5  # Centered between 0 and 1
+
+        # Draw physical thumb keys
+        for idx, key in enumerate(thumbs["physical"]):
+            col_offset = physical_col_offsets[idx]
+            x = hand_x + col_offset * (dims.key_width + dims.key_spacing)
+            is_inactive = key is None or key == "-"
+            is_access_key = active == idx
+            self.draw_key(
+                pdf,
+                x,
+                dims.physical_thumb_y,
+                key,
+                is_inactive=is_inactive,
+                is_access_key=is_access_key,
+            )
+
+        # Draw combined thumb key
+        x = hand_x + combined_col_offset * (dims.key_width + dims.key_spacing)
+        combined_key = thumbs["combined"]
+        is_inactive = combined_key is None or combined_key == "-"
+        is_access_key = active == "combined"
+        self.draw_key(
+            pdf,
+            x,
+            dims.combined_thumb_y,
+            combined_key,
+            is_combined=True,
+            is_inactive=is_inactive,
+            is_access_key=is_access_key,
+        )
+
     def draw_layer_section(
         self,
         pdf: canvas.Canvas,
@@ -215,46 +272,8 @@ class PDFRenderer:
 
         # Draw left hand thumb keys
         left_thumbs = layer_data["left_thumbs"]
-        left_active = left_thumbs.get("active")
-
-        # Draw physical thumb keys (aligned to interior = columns 3-4)
-        for idx, key in enumerate(left_thumbs["physical"]):
-            col_offset = 3 + idx  # Columns 3 and 4
-            x = dims.left_hand_x + col_offset * (dims.key_width + dims.key_spacing)
-            # A key is inactive only if it has no keycode (dash or None)
-            is_inactive = key is None or key == "-"
-            is_access_key = (
-                left_active == idx
-            )  # This is an access key if it's the active one
-            self.draw_key(
-                pdf,
-                x,
-                dims.physical_thumb_y,
-                key,
-                is_inactive=is_inactive,
-                is_access_key=is_access_key,
-            )
-
-        # Draw combined thumb key (centered under physical thumbs)
-        x = (
-            dims.left_hand_x
-            + 3 * (dims.key_width + dims.key_spacing)
-            + (dims.key_width + dims.key_spacing) / 2
-        )
-        combined_key = left_thumbs["combined"]
-        # A key is inactive only if it has no keycode (dash or None)
-        is_inactive = combined_key is None or combined_key == "-"
-        is_access_key = (
-            left_active == "combined"
-        )  # This is an access key if it's the active one
-        self.draw_key(
-            pdf,
-            x,
-            dims.combined_thumb_y,
-            combined_key,
-            is_combined=True,
-            is_inactive=is_inactive,
-            is_access_key=is_access_key,
+        self._draw_thumb_cluster(
+            pdf, left_thumbs, dims, dims.left_hand_x, is_left_hand=True
         )
 
         # Draw right hand regular keys (3 rows of 5 keys)
@@ -262,40 +281,6 @@ class PDFRenderer:
 
         # Draw right hand thumb keys
         right_thumbs = layer_data["right_thumbs"]
-        right_active = right_thumbs.get("active")
-
-        # Draw physical thumb keys (aligned to interior = columns 0-1)
-        for idx, key in enumerate(right_thumbs["physical"]):
-            col_offset = idx  # Columns 0 and 1
-            x = dims.right_hand_x + col_offset * (dims.key_width + dims.key_spacing)
-            # A key is inactive only if it has no keycode (dash or None)
-            is_inactive = key is None or key == "-"
-            is_access_key = (
-                right_active == idx
-            )  # This is an access key if it's the active one
-            self.draw_key(
-                pdf,
-                x,
-                dims.physical_thumb_y,
-                key,
-                is_inactive=is_inactive,
-                is_access_key=is_access_key,
-            )
-
-        # Draw combined thumb key (centered under physical thumbs)
-        x = dims.right_hand_x + (dims.key_width + dims.key_spacing) / 2
-        combined_key = right_thumbs["combined"]
-        # A key is inactive only if it has no keycode (dash or None)
-        is_inactive = combined_key is None or combined_key == "-"
-        is_access_key = (
-            right_active == "combined"
-        )  # This is an access key if it's the active one
-        self.draw_key(
-            pdf,
-            x,
-            dims.combined_thumb_y,
-            combined_key,
-            is_combined=True,
-            is_inactive=is_inactive,
-            is_access_key=is_access_key,
+        self._draw_thumb_cluster(
+            pdf, right_thumbs, dims, dims.right_hand_x, is_left_hand=False
         )

@@ -100,6 +100,94 @@ class TestPDFRenderer:
 
         assert pdf_path.exists()
 
+    def test_draw_thumb_cluster_left_hand(
+        self, pdf_config: PDFConfig, tmp_path: Path
+    ) -> None:
+        """Test drawing thumb cluster for left hand."""
+        from zmk_to_pdf.data_models import ThumbKeysActive
+
+        renderer = PDFRenderer(pdf_config)
+        pdf_path = tmp_path / "test_thumb_cluster_left.pdf"
+        pdf = canvas.Canvas(str(pdf_path))
+
+        # Create sample thumb keys
+        left_thumbs: ThumbKeysActive = {
+            "physical": ["SPACE", "BSPC"],
+            "combined": "SYM",
+            "active": 0,
+        }
+
+        # Create dummy layout dimensions
+        dims = LayoutDimensions(
+            key_width=0.5,
+            key_height=0.5,
+            key_spacing=0.1,
+            hand_gap=0.3,
+            thumb_spacing=0.15,
+            hand_width=3.0,
+            total_width=6.3,
+            left_hand_x=0.5,
+            right_hand_x=3.8,
+            keys_start_y=7.0,
+            first_row_y=7.0,
+            physical_thumb_y=5.5,
+            combined_thumb_y=4.85,
+        )
+
+        # Draw left hand thumb cluster
+        renderer._draw_thumb_cluster(
+            pdf, left_thumbs, dims, dims.left_hand_x, is_left_hand=True
+        )
+
+        pdf.showPage()
+        pdf.save()
+
+        assert pdf_path.exists()
+
+    def test_draw_thumb_cluster_right_hand(
+        self, pdf_config: PDFConfig, tmp_path: Path
+    ) -> None:
+        """Test drawing thumb cluster for right hand."""
+        from zmk_to_pdf.data_models import ThumbKeysActive
+
+        renderer = PDFRenderer(pdf_config)
+        pdf_path = tmp_path / "test_thumb_cluster_right.pdf"
+        pdf = canvas.Canvas(str(pdf_path))
+
+        # Create sample thumb keys
+        right_thumbs: ThumbKeysActive = {
+            "physical": ["RET", "DEL"],
+            "combined": "NUM",
+            "active": "combined",
+        }
+
+        # Create dummy layout dimensions
+        dims = LayoutDimensions(
+            key_width=0.5,
+            key_height=0.5,
+            key_spacing=0.1,
+            hand_gap=0.3,
+            thumb_spacing=0.15,
+            hand_width=3.0,
+            total_width=6.3,
+            left_hand_x=0.5,
+            right_hand_x=3.8,
+            keys_start_y=7.0,
+            first_row_y=7.0,
+            physical_thumb_y=5.5,
+            combined_thumb_y=4.85,
+        )
+
+        # Draw right hand thumb cluster
+        renderer._draw_thumb_cluster(
+            pdf, right_thumbs, dims, dims.right_hand_x, is_left_hand=False
+        )
+
+        pdf.showPage()
+        pdf.save()
+
+        assert pdf_path.exists()
+
     def test_draw_key_creates_canvas_calls(
         self, pdf_config: PDFConfig, tmp_path: Path
     ) -> None:
