@@ -8,6 +8,39 @@ from .data_models import LayerAccessInfo, ThumbKeyLabelDict
 from .key_code_map import KeyCodeMap, translate_key_code
 
 
+def split_keys_respecting_parens(definition: str) -> list[str]:
+    """Split a layer definition by commas, respecting parentheses nesting.
+
+    Args:
+        definition: Layer definition string with comma-separated keys
+
+    Returns:
+        List of individual key code strings
+    """
+    keys = []
+    current_key = ""
+    paren_depth = 0
+
+    for char in definition:
+        if char == "(":
+            paren_depth += 1
+            current_key += char
+        elif char == ")":
+            paren_depth -= 1
+            current_key += char
+        elif char == "," and paren_depth == 0:
+            if current_key.strip():
+                keys.append(current_key.strip())
+            current_key = ""
+        else:
+            current_key += char
+
+    if current_key.strip():
+        keys.append(current_key.strip())
+
+    return keys
+
+
 def parse_config_file(config_path: Path) -> str:
     """Read config file and return content.
 
@@ -139,30 +172,8 @@ def parse_layer_access_from_base(
     Returns:
         Dictionary mapping layer names to list of access info
     """
-    # First, properly parse all keys to get correct indices
-    # Split by comma, but need to handle nested commas in macros
-    keys_raw = []
-    current_key = ""
-    paren_depth = 0
-
-    for char in base_definition:
-        if char == "(":
-            paren_depth += 1
-            current_key += char
-        elif char == ")":
-            paren_depth -= 1
-            current_key += char
-        elif char == "," and paren_depth == 0:
-            # Top-level comma - end of key
-            if current_key.strip():
-                keys_raw.append(current_key.strip())
-            current_key = ""
-        else:
-            current_key += char
-
-    # Don't forget the last key
-    if current_key.strip():
-        keys_raw.append(current_key.strip())
+    # Parse all keys respecting nested parentheses
+    keys_raw = split_keys_respecting_parens(base_definition)
 
     # Now search for U_LT patterns in each key
     lt_pattern = r"U_LT\s*\(\s*U_(\w+)\s*,\s*([^)]+)\s*\)"
@@ -225,26 +236,7 @@ def parse_layer_access_from_all_layers(
             continue
 
         # Parse keys from this layer
-        keys_raw = []
-        current_key = ""
-        paren_depth = 0
-
-        for char in layer_def:
-            if char == "(":
-                paren_depth += 1
-                current_key += char
-            elif char == ")":
-                paren_depth -= 1
-                current_key += char
-            elif char == "," and paren_depth == 0:
-                if current_key.strip():
-                    keys_raw.append(current_key.strip())
-                current_key = ""
-            else:
-                current_key += char
-
-        if current_key.strip():
-            keys_raw.append(current_key.strip())
+        keys_raw = split_keys_respecting_parens(layer_def)
 
         # Search for &u_to_U_* patterns
         u_to_pattern = r"&u_to_U_(\w+)"
@@ -289,19 +281,8 @@ def detect_keyboard_layout(content: str) -> str:
     if base_def is None:
         return "unknown"
 
-    # Count keys by splitting on commas while respecting parentheses
-    key_count = 0
-    paren_depth = 0
-
-    for char in base_def:
-        if char == "(":
-            paren_depth += 1
-        elif char == ")":
-            paren_depth -= 1
-        elif char == "," and paren_depth == 0:
-            key_count += 1
-
-    key_count += 1  # Add 1 for the last key (no trailing comma)
+    # Count keys by splitting respecting parentheses
+    key_count = len(split_keys_respecting_parens(base_def))
 
     # Classify layout based on key count
     if key_count <= 34:

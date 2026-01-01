@@ -11,11 +11,53 @@ from zmk_to_pdf.parser import (
     parse_layer_access_from_base,
     parse_layer_access_from_all_layers,
     parse_layer_keys,
+    split_keys_respecting_parens,
 )
 
 
 class TestExtractLayerDefinition:
     """Test layer definition extraction."""
+
+
+class TestSplitKeysRespectingParens:
+    """Test split_keys_respecting_parens helper function."""
+
+    def test_simple_split(self) -> None:
+        """Test splitting simple comma-separated keys."""
+        result = split_keys_respecting_parens("A, B, C")
+        assert result == ["A", "B", "C"]
+
+    def test_nested_parens(self) -> None:
+        """Test splitting with nested parentheses."""
+        result = split_keys_respecting_parens("U_MT(A, B), C")
+        assert result == ["U_MT(A, B)", "C"]
+
+    def test_deeply_nested(self) -> None:
+        """Test splitting with deeply nested parentheses."""
+        result = split_keys_respecting_parens("U_LT(U_NAV, U_MT(X, Y)), Z")
+        assert result == ["U_LT(U_NAV, U_MT(X, Y))", "Z"]
+
+    def test_empty_string(self) -> None:
+        """Test splitting empty string."""
+        result = split_keys_respecting_parens("")
+        assert result == []
+
+    def test_whitespace_handling(self) -> None:
+        """Test that whitespace is trimmed."""
+        result = split_keys_respecting_parens("  A  ,  B  ")
+        assert result == ["A", "B"]
+
+    def test_single_key(self) -> None:
+        """Test with single key (no commas)."""
+        result = split_keys_respecting_parens("&kp Q")
+        assert result == ["&kp Q"]
+
+    def test_complex_macro(self) -> None:
+        """Test with complex nested macro."""
+        result = split_keys_respecting_parens(
+            "&kp A, U_MT(LCTRL, B), U_LT(U_NAV, C), D"
+        )
+        assert result == ["&kp A", "U_MT(LCTRL, B)", "U_LT(U_NAV, C)", "D"]
 
     def test_extract_base_layer(self, config_full: str) -> None:
         """Test extracting BASE layer."""
