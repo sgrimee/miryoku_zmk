@@ -102,16 +102,8 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
 
     total_pages = len(page_groupings)
 
-    # Generate legend text dynamically
-    left_physical = thumb_keys["left"]["physical"]
-    right_physical = thumb_keys["right"]["physical"]
-
-    # Extract values (should always have 2 elements from extract_thumb_keys)
-    left_outer_text = left_physical[0] or "?"
-    left_inner_text = left_physical[1] or "?"
-    right_inner_text = right_physical[0] or "?"
-    right_outer_text = right_physical[1] or "?"
-    legend = f"Legend: Red dashed border = Combined thumb key ({left_outer_text}+{left_inner_text} on left, {right_inner_text}+{right_outer_text} on right)"
+    # Generate legend text - position-only (layout-agnostic)
+    legend = "Legend: Red dashed border = Combined thumb key (left outer + left inner on left, right inner + right outer on right)"
 
     for page_num, page_layers in enumerate(page_groupings):
         # Title on page

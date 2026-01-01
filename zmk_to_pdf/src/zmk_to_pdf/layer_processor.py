@@ -84,12 +84,16 @@ def generate_access_text(
 ) -> str:
     """Generate access text for a layer based on how it's accessed from BASE.
 
+    Returns position-only text since positions (left outer, left inner, etc.)
+    are always correct regardless of layout configuration, while key names
+    can change if the user customizes their BASE layer.
+
     Args:
         layer_name: Name of the layer
         layer_access: Access map from BASE layer
 
     Returns:
-        Human-readable access description
+        Human-readable access description based on position
     """
     if layer_name == "TAP":
         return "→TAP from other layers"
@@ -100,30 +104,51 @@ def generate_access_text(
     access_info = layer_access[layer_name]
 
     if len(access_info) == 1:
-        # Single access key
+        # Single access key - show position only
         info = access_info[0]
         position = info["position"]
-        key = info["key"]
 
-        # Add position description for thumb keys
-        if "thumb" in position or position in [
+        # Check if it's a thumb key position
+        thumb_positions = {
             "left_combined",
             "left_outer",
             "left_inner",
             "right_combined",
             "right_inner",
             "right_outer",
-        ]:
+        }
+
+        if position in thumb_positions:
             pos_desc = position.replace("_", " ")
-            return f"Hold {key} ({pos_desc})"
+            return pos_desc
         else:
-            return f"Hold {key}"
+            # For finger key positions, still show them clearly
+            pos_desc = position.replace("_", " ")
+            return pos_desc
     else:
-        # Multiple access keys - list them with better formatting
-        keys = [info["key"] for info in access_info]
-        # Replace slash symbol with word to avoid confusion
-        keys = ["SLASH" if k == "/" else k for k in keys]
-        return "Hold " + " / ".join(keys)
+        # Multiple access keys - show thumb positions only, skip finger keys
+        thumb_positions = {
+            "left_combined",
+            "left_outer",
+            "left_inner",
+            "right_combined",
+            "right_inner",
+            "right_outer",
+        }
+
+        thumb_accesses = [
+            info["position"].replace("_", " ")
+            for info in access_info
+            if info["position"] in thumb_positions
+        ]
+
+        if thumb_accesses:
+            # If we have thumb key accesses, show only those
+            return " / ".join(thumb_accesses)
+        else:
+            # Fallback: show all positions if none are thumb keys
+            positions = [info["position"].replace("_", " ") for info in access_info]
+            return " / ".join(positions)
 
 
 def build_layer_data(
