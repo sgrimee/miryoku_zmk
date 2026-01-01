@@ -2,6 +2,7 @@
 
 from zmk_to_pdf.key_code_map import KeyCodeMap
 from zmk_to_pdf.layer_processor import (
+    POSITION_TO_ACTIVE,
     build_layer_data,
     create_page_groupings,
     determine_active_thumb,
@@ -13,6 +14,36 @@ from zmk_to_pdf.parser import (
     parse_layer_access_from_base,
     parse_layer_keys,
 )
+
+
+class TestPositionToActiveConstant:
+    """Test POSITION_TO_ACTIVE mapping constant."""
+
+    def test_position_to_active_exists(self) -> None:
+        """Test that POSITION_TO_ACTIVE constant is defined."""
+        assert isinstance(POSITION_TO_ACTIVE, dict)
+        assert len(POSITION_TO_ACTIVE) > 0
+
+    def test_position_to_active_mappings(self) -> None:
+        """Test correct position to active value mappings."""
+        assert POSITION_TO_ACTIVE["left_combined"] == "combined"
+        assert POSITION_TO_ACTIVE["left_outer"] == 0
+        assert POSITION_TO_ACTIVE["left_inner"] == 1
+        assert POSITION_TO_ACTIVE["right_combined"] == "combined"
+        assert POSITION_TO_ACTIVE["right_inner"] == 0
+        assert POSITION_TO_ACTIVE["right_outer"] == 1
+
+    def test_position_to_active_completeness(self) -> None:
+        """Test that all thumb positions are covered."""
+        expected_positions = {
+            "left_combined",
+            "left_outer",
+            "left_inner",
+            "right_combined",
+            "right_inner",
+            "right_outer",
+        }
+        assert set(POSITION_TO_ACTIVE.keys()) == expected_positions
 
 
 class TestCreatePageGroupings:

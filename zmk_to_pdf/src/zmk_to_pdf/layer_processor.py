@@ -3,6 +3,17 @@
 from .data_models import LayerAccessInfo, LayerData, ThumbKeysActive, ThumbKeysDict
 
 
+# Mapping from position names to active thumb representation
+POSITION_TO_ACTIVE: dict[str, str | int] = {
+    "left_combined": "combined",
+    "left_outer": 0,
+    "left_inner": 1,
+    "right_combined": "combined",
+    "right_inner": 0,
+    "right_outer": 1,
+}
+
+
 def create_page_groupings(layers: list[str]) -> list[list[str]]:
     """Group layers into pages dynamically.
 
@@ -66,19 +77,9 @@ def determine_active_thumb(
 
     for info in layer_access[layer_name]:
         position = info["position"]
-
-        if position == "left_combined":
-            active["left"] = "combined"
-        elif position == "left_outer":
-            active["left"] = 0
-        elif position == "left_inner":
-            active["left"] = 1
-        elif position == "right_combined":
-            active["right"] = "combined"
-        elif position == "right_inner":
-            active["right"] = 0
-        elif position == "right_outer":
-            active["right"] = 1
+        if position in POSITION_TO_ACTIVE:
+            side = "left" if position.startswith("left") else "right"
+            active[side] = POSITION_TO_ACTIVE[position]
 
     return active
 
@@ -100,19 +101,9 @@ def _get_active_thumbs_from_access(
 
     for info in access_info:
         position = info["position"]
-
-        if position == "left_combined":
-            active["left"] = "combined"
-        elif position == "left_outer":
-            active["left"] = 0
-        elif position == "left_inner":
-            active["left"] = 1
-        elif position == "right_combined":
-            active["right"] = "combined"
-        elif position == "right_inner":
-            active["right"] = 0
-        elif position == "right_outer":
-            active["right"] = 1
+        if position in POSITION_TO_ACTIVE:
+            side = "left" if position.startswith("left") else "right"
+            active[side] = POSITION_TO_ACTIVE[position]
 
     return active
 
