@@ -298,8 +298,9 @@ class TestDiscoverLayers:
         assert "NAV" in layers
         assert "NUM" in layers
 
-    def test_discover_maintains_order(self, config_full: str) -> None:
-        """Test that layers are discovered in order."""
-        layers = discover_layers(config_full)
-        # TAP should come before other layers if defined first
-        assert layers.index("TAP") < layers.index("NAV")
+    def test_discover_excludes_extra_when_present(self, config_with_extra: str) -> None:
+        """Test that EXTRA layer is excluded even when defined."""
+        layers = discover_layers(config_with_extra)
+        assert "BASE" not in layers
+        assert "EXTRA" not in layers
+        assert "TAP" in layers

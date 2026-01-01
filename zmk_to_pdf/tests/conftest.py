@@ -43,6 +43,13 @@ def config_edge_cases() -> str:
 
 
 @pytest.fixture
+def config_with_extra() -> str:
+    """Load test configuration with EXTRA layer."""
+    config_path = Path(__file__).parent / "fixtures" / "custom_config_with_extra.h"
+    return config_path.read_text(encoding="utf-8")
+
+
+@pytest.fixture
 def sample_layer_data() -> LayerData:
     """Create sample layer data for rendering tests."""
     return LayerData(

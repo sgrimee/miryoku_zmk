@@ -381,8 +381,8 @@ def discover_layers(content: str) -> list[str]:
     pattern = r"#define\s+MIRYOKU_LAYER_([A-Z_]+)\s"
     matches = re.findall(pattern, content)
 
-    # Filter out BASE (always excluded)
-    excluded = {"BASE"}
+    # Filter out BASE and EXTRA (always excluded)
+    excluded = {"BASE", "EXTRA"}
 
     layers = [m for m in matches if m not in excluded]
 

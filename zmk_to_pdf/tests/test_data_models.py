@@ -70,10 +70,12 @@ class TestLayerAccessInfo:
             "position": "left_inner",
             "key": "TAB",
             "index": 34,
+            "source_layer": None,
         }
         assert access["position"] == "left_inner"
         assert access["key"] == "TAB"
         assert access["index"] == 34
+        assert access["source_layer"] is None
 
 
 class TestLayerData:
