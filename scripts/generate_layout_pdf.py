@@ -8,12 +8,14 @@
 
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TypedDict
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
-from reportlab.lib.colors import HexColor, black
+from reportlab.lib.colors import Color, HexColor, black
 
 # === KEY CODE TRANSLATION TABLE ===
 KEY_CODE_MAP = {
@@ -181,6 +183,395 @@ KEY_CODE_MAP = {
 }
 
 
+# === DATA MODELS ===
+
+
+class ThumbKeysDict(TypedDict):
+    """Physical and combined thumb key structure."""
+
+    physical: list[str | None]
+    combined: str | None
+
+
+class ThumbKeysActive(TypedDict):
+    """Active thumb keys for a layer."""
+
+    physical: list[str | None]
+    combined: str | None
+    active: str | int | None
+
+
+class LayerAccessInfo(TypedDict):
+    """Information about how a layer is accessed."""
+
+    position: str
+    key: str
+    index: int
+
+
+class LayerData(TypedDict):
+    """Complete layer structure for rendering."""
+
+    left_hand: list[list[str | None]]
+    right_hand: list[list[str | None]]
+    left_thumbs: ThumbKeysActive
+    right_thumbs: ThumbKeysActive
+    access: str
+
+
+@dataclass
+class PDFConfig:
+    """PDF rendering configuration and constants."""
+
+    # Key dimensions (in inches)
+    key_width: float = 0.60
+    key_height: float = 0.34
+    key_spacing: float = 0.03
+
+    # Layout dimensions
+    hand_gap: float = 0.40
+    section_height: float = 2.25
+    thumb_spacing: float = 0.04
+
+    # Page layout
+    title_font_size: int = 14
+    layer_name_font_size: int = 16
+    key_font_size: int = 9
+    access_font_size: int = 8
+    legend_font_size: int = 8
+    page_number_font_size: int = 9
+
+    # Margins
+    margin_top: float = 0.35
+    margin_left: float = 0.5
+    margin_right: float = 1.0
+    title_to_legend: float = 0.20
+    legend_to_keys: float = 0.30
+
+    # Key colors (hex codes)
+    color_empty: str = "#CCCCCC"
+    color_empty_text: str = "#999999"
+    color_navigation: str = "#90EE90"
+    color_modifier: str = "#FFB6C1"
+    color_mouse_clipboard: str = "#87CEEB"
+    color_system: str = "#F0E68C"
+    color_regular: str = "#FFFFFF"
+    color_layer_access: str = "#DDA0DD"
+    color_inactive_bg: str = "#E8E8E8"
+    color_inactive_text: str = "#AAAAAA"
+
+    # Special colors
+    color_text: str = "#000000"
+    color_combined_border: str = "#FF0000"
+    color_access_text: str = "#0066CC"
+
+
+# === KEY COLORIZER ===
+
+
+class KeyColorizer:
+    """Determines colors for keys based on their function."""
+
+    def __init__(self, config: PDFConfig) -> None:
+        """Initialize with color configuration."""
+        self.config = config
+
+    def get_colors(
+        self, text: str | None, is_inactive: bool = False
+    ) -> tuple[Color, Color]:
+        """Get background and text colors for a key.
+
+        Args:
+            text: Key label text
+            is_inactive: Whether key is inactive for current layer
+
+        Returns:
+            Tuple of (background_color, text_color)
+        """
+        if is_inactive:
+            return (
+                HexColor(self.config.color_inactive_bg),
+                HexColor(self.config.color_inactive_text),
+            )
+
+        if text is None or text == "-" or text == "":
+            return (
+                HexColor(self.config.color_empty),
+                HexColor(self.config.color_empty_text),
+            )
+
+        # Navigation keys
+        if any(c in text for c in ["→", "↑", "↓", "←"]):
+            return (HexColor(self.config.color_navigation), black)
+
+        # Modifiers
+        if any(
+            c in text
+            for c in ["CTRL", "ALT", "SHIFT", "LGUI", "RGUI", "LSHFT", "RSHFT"]
+        ):
+            return (HexColor(self.config.color_modifier), black)
+
+        # Mouse and clipboard
+        if text in ["BTN1", "BTN2", "BTN3", "RDO", "UND", "PST", "CPY", "CUT"]:
+            return (HexColor(self.config.color_mouse_clipboard), black)
+
+        # Layer transitions and special keys
+        if "BOOT" in text or "→" in text:
+            return (HexColor(self.config.color_layer_access), black)
+
+        # System keys
+        if text in ["BSPC", "RET", "DEL", "ESC", "SPC", "TAB", "SPACE"]:
+            return (HexColor(self.config.color_system), black)
+
+        # Regular keys
+        return (HexColor(self.config.color_regular), black)
+
+
+# === PDF RENDERER ===
+
+
+class PDFRenderer:
+    """Handles all PDF rendering operations."""
+
+    def __init__(self, config: PDFConfig) -> None:
+        """Initialize renderer with configuration."""
+        self.config = config
+        self.colorizer = KeyColorizer(config)
+
+    def draw_key(
+        self,
+        pdf: canvas.Canvas,
+        x: float,
+        y: float,
+        text: str | None,
+        is_combined: bool = False,
+        is_inactive: bool = False,
+        is_access_key: bool = False,
+    ) -> None:
+        """Draw a single key.
+
+        Args:
+            pdf: Canvas to draw on
+            x: X coordinate
+            y: Y coordinate
+            text: Key label text
+            is_combined: True for combined thumb keys (red dashed border)
+            is_inactive: True for grayed out keys (not relevant for current layer)
+            is_access_key: True if this key is used to access the current layer
+        """
+        # Normalize None to dash
+        if text is None:
+            text = "-"
+
+        # Get colors - if it's an access key, override with system color (yellow)
+        if is_access_key and not is_inactive:
+            bg_color = HexColor(self.config.color_system)
+            text_color = black
+        else:
+            bg_color, text_color = self.colorizer.get_colors(text, is_inactive)
+
+        # Draw key background
+        pdf.setFillColor(bg_color)
+        border_color = black if not is_inactive else HexColor("#CCCCCC")
+        pdf.setStrokeColor(border_color)
+        pdf.setLineWidth(0.5)
+        # Convert dimensions to inches
+        key_width_inch = self.config.key_width * inch
+        key_height_inch = self.config.key_height * inch
+        pdf.rect(x, y, key_width_inch, key_height_inch, fill=1)
+
+        # Add red dashed border for combined thumb keys (active ones)
+        if is_combined and not is_inactive:
+            pdf.setLineWidth(1)
+            pdf.setStrokeColor(HexColor(self.config.color_combined_border))
+            pdf.setDash(2, 2)
+            pdf.rect(x, y, key_width_inch, key_height_inch, fill=0)
+            pdf.setDash()
+
+        # Draw text
+        pdf.setFont("Helvetica-Bold", self.config.key_font_size)
+        pdf.setFillColor(text_color)
+
+        # Center text
+        text_width = pdf.stringWidth(text, "Helvetica-Bold", self.config.key_font_size)
+        text_x = x + (key_width_inch - text_width) / 2
+        text_y = y + (key_height_inch - self.config.key_font_size) / 2
+        pdf.drawString(text_x, text_y, text)
+
+    def draw_layer_section(
+        self,
+        pdf: canvas.Canvas,
+        layer_name: str,
+        layer_data: LayerData,
+        y_offset: float,
+        page_width: float,
+    ) -> None:
+        """Draw a single layer section on a page.
+
+        Args:
+            pdf: Canvas to draw on
+            layer_name: Name of the layer
+            layer_data: Layer data structure
+            y_offset: Y coordinate for section start
+            page_width: Total page width
+        """
+        # Calculate positions
+        left_hand = layer_data["left_hand"]
+        right_hand = layer_data["right_hand"]
+
+        # Convert dimensions to inches
+        key_width_inch = self.config.key_width * inch
+        key_height_inch = self.config.key_height * inch
+        key_spacing_inch = self.config.key_spacing * inch
+        hand_gap_inch = self.config.hand_gap * inch
+        thumb_spacing_inch = self.config.thumb_spacing * inch
+
+        # Total width needed for one hand (5 keys + 4 spacings)
+        hand_width = 5 * key_width_inch + 4 * key_spacing_inch
+        # Total width for both hands with proper gap
+        total_width = 2 * hand_width + hand_gap_inch
+
+        # Center the keyboard layout horizontally on the page
+        page_center = page_width / 2
+        left_hand_x = page_center - total_width / 2
+        right_hand_x = left_hand_x + hand_width + hand_gap_inch
+
+        # Reset fill color to black for text
+        pdf.setFillColor(black)
+
+        # Title above left hand keyboard
+        pdf.setFont("Helvetica-Bold", self.config.layer_name_font_size)
+        pdf.drawString(left_hand_x, y_offset, layer_name)
+
+        # Access info above right hand keyboard (right-aligned)
+        pdf.setFont("Helvetica-Bold", self.config.access_font_size)
+        pdf.setFillColor(HexColor(self.config.color_access_text))
+        access_text = f"Access: {layer_data['access']}"
+        # Truncate access text if too long for right hand area
+        max_access_width = hand_width - 0.1 * inch
+        while (
+            pdf.stringWidth(access_text, "Helvetica-Bold", self.config.access_font_size)
+            > max_access_width
+            and len(access_text) > 15
+        ):
+            access_text = access_text[:-4] + "..."
+        access_width = pdf.stringWidth(
+            access_text, "Helvetica-Bold", self.config.access_font_size
+        )
+        pdf.drawString(right_hand_x + hand_width - access_width, y_offset, access_text)
+        pdf.setFillColor(black)
+
+        # Content area y positions - start keys below the title
+        keys_start_y = y_offset - 0.45 * inch
+        first_row_y = keys_start_y
+
+        # Draw left hand regular keys (3 rows of 5 keys)
+        for row_idx, row in enumerate(left_hand):
+            y = first_row_y - (row_idx * (key_height_inch + key_spacing_inch))
+            for col_idx, key in enumerate(row):
+                x = left_hand_x + col_idx * (key_width_inch + key_spacing_inch)
+                self.draw_key(pdf, x, y, key)
+
+        # Calculate thumb row y positions (below finger keys)
+        physical_thumb_y = (
+            first_row_y
+            - (3 * (key_height_inch + key_spacing_inch))
+            - thumb_spacing_inch
+        )
+        combined_thumb_y = physical_thumb_y - (key_height_inch + thumb_spacing_inch)
+
+        # Draw left hand thumb keys
+        left_thumbs = layer_data["left_thumbs"]
+        left_active = left_thumbs.get("active")
+
+        # Draw physical thumb keys (aligned to interior = columns 3-4)
+        for idx, key in enumerate(left_thumbs["physical"]):
+            col_offset = 3 + idx  # Columns 3 and 4
+            x = left_hand_x + col_offset * (key_width_inch + key_spacing_inch)
+            # A key is inactive only if it has no keycode (dash or None)
+            is_inactive = key is None or key == "-"
+            is_access_key = (
+                left_active == idx
+            )  # This is an access key if it's the active one
+            self.draw_key(
+                pdf,
+                x,
+                physical_thumb_y,
+                key,
+                is_inactive=is_inactive,
+                is_access_key=is_access_key,
+            )
+
+        # Draw combined thumb key (centered under physical thumbs)
+        x = (
+            left_hand_x
+            + 3 * (key_width_inch + key_spacing_inch)
+            + (key_width_inch + key_spacing_inch) / 2
+        )
+        combined_key = left_thumbs["combined"]
+        # A key is inactive only if it has no keycode (dash or None)
+        is_inactive = combined_key is None or combined_key == "-"
+        is_access_key = (
+            left_active == "combined"
+        )  # This is an access key if it's the active one
+        self.draw_key(
+            pdf,
+            x,
+            combined_thumb_y,
+            combined_key,
+            is_combined=True,
+            is_inactive=is_inactive,
+            is_access_key=is_access_key,
+        )
+
+        # Draw right hand regular keys (3 rows of 5 keys)
+        for row_idx, row in enumerate(right_hand):
+            y = first_row_y - (row_idx * (key_height_inch + key_spacing_inch))
+            for col_idx, key in enumerate(row):
+                x = right_hand_x + col_idx * (key_width_inch + key_spacing_inch)
+                self.draw_key(pdf, x, y, key)
+
+        # Draw right hand thumb keys
+        right_thumbs = layer_data["right_thumbs"]
+        right_active = right_thumbs.get("active")
+
+        # Draw physical thumb keys (aligned to interior = columns 0-1)
+        for idx, key in enumerate(right_thumbs["physical"]):
+            col_offset = idx  # Columns 0 and 1
+            x = right_hand_x + col_offset * (key_width_inch + key_spacing_inch)
+            # A key is inactive only if it has no keycode (dash or None)
+            is_inactive = key is None or key == "-"
+            is_access_key = (
+                right_active == idx
+            )  # This is an access key if it's the active one
+            self.draw_key(
+                pdf,
+                x,
+                physical_thumb_y,
+                key,
+                is_inactive=is_inactive,
+                is_access_key=is_access_key,
+            )
+
+        # Draw combined thumb key (centered under physical thumbs)
+        x = right_hand_x + (key_width_inch + key_spacing_inch) / 2
+        combined_key = right_thumbs["combined"]
+        # A key is inactive only if it has no keycode (dash or None)
+        is_inactive = combined_key is None or combined_key == "-"
+        is_access_key = (
+            right_active == "combined"
+        )  # This is an access key if it's the active one
+        self.draw_key(
+            pdf,
+            x,
+            combined_thumb_y,
+            combined_key,
+            is_combined=True,
+            is_inactive=is_inactive,
+            is_access_key=is_access_key,
+        )
+
+
 # === PARSING FUNCTIONS ===
 
 
@@ -271,13 +662,13 @@ def parse_layer_keys(definition: str) -> list[str | None]:
     # Split by comma
     keys_raw = [k.strip() for k in definition.split(",")]
 
-    # Translate each key
-    keys = [translate_key_code(k) for k in keys_raw if k]
+    # Translate each key (include empty keys as None)
+    keys = [translate_key_code(k) if k else None for k in keys_raw]
 
     return keys
 
 
-def extract_thumb_keys(tap_keys: list[str | None]) -> dict:
+def extract_thumb_keys(tap_keys: list[str | None]) -> dict[str, ThumbKeysDict]:
     """Extract thumb key labels from TAP layer.
 
     Thumb row is indices 30-39 (out of 40 total keys):
@@ -319,7 +710,9 @@ def extract_thumb_keys(tap_keys: list[str | None]) -> dict:
     }
 
 
-def parse_layer_access_from_base(base_definition: str) -> dict:
+def parse_layer_access_from_base(
+    base_definition: str,
+) -> dict[str, list[LayerAccessInfo]]:
     """Parse BASE layer to determine which key accesses which layer.
 
     Looks for U_LT(U_LAYERNAME, KEY) patterns.
@@ -362,7 +755,7 @@ def parse_layer_access_from_base(base_definition: str) -> dict:
 
     # Now search for U_LT patterns in each key
     lt_pattern = r"U_LT\s*\(\s*U_(\w+)\s*,\s*([^)]+)\s*\)"
-    access_map: dict[str, list[dict[str, str | int]]] = {}
+    access_map: dict[str, list[LayerAccessInfo]] = {}
 
     for idx, key_code in enumerate(keys_raw):
         match = re.match(lt_pattern, key_code)
@@ -384,7 +777,11 @@ def parse_layer_access_from_base(base_definition: str) -> dict:
                 access_map[layer_name] = []
 
             access_map[layer_name].append(
-                {"position": position, "key": translated_key or key_name, "index": idx}
+                {
+                    "position": position,
+                    "key": translated_key or key_name,
+                    "index": idx,
+                }
             )
 
     return access_map
@@ -413,7 +810,9 @@ def determine_position_name(index: int) -> str:
     return f"{hand}_row{row}_col{local_col}"
 
 
-def generate_access_text(layer_name: str, layer_access: dict) -> str:
+def generate_access_text(
+    layer_name: str, layer_access: dict[str, list[LayerAccessInfo]]
+) -> str:
     """Generate access text for a layer based on how it's accessed from BASE.
 
     Examples:
@@ -457,22 +856,32 @@ def generate_access_text(layer_name: str, layer_access: dict) -> str:
         return "Hold " + " / ".join(keys)
 
 
-def determine_active_thumb(layer_name: str, layer_access: dict):
-    """Determine which thumb keys are active for accessing this layer.
+def determine_active_thumb(
+    layer_name: str, layer_access: dict[str, list[LayerAccessInfo]]
+) -> dict[str, str | int | None]:
+    """Determine which thumb keys are the access keys for this layer.
 
     Returns:
     {
         "left": None | 0 | 1 | "combined" | "all",
         "right": None | 0 | 1 | "combined" | "all",
     }
+
+    Note: This function identifies which thumb key is used to ACCESS the layer,
+    not which thumb keys are active IN the layer. A thumb key being the access key
+    gets highlighted in yellow. All other keys with actual keycodes (not U_NA or U_NP)
+    are considered active in the layer.
     """
+    # For TAP layer, no thumb keys are used to access it (it's accessed via →TAP)
+    # So we return None to indicate no access keys, but thumb keys will still be
+    # shown as active if they have keycodes
     if layer_name == "TAP":
-        return {"left": "all", "right": "all"}
+        return {"left": None, "right": None}
 
     if layer_name not in layer_access:
         return {"left": None, "right": None}
 
-    active: dict = {"left": None, "right": None}
+    active: dict[str, str | int | None] = {"left": None, "right": None}
 
     for info in layer_access[layer_name]:
         position = info["position"]
@@ -547,8 +956,10 @@ def create_page_groupings(layers: list[str]) -> list[list[str]]:
 
 
 def build_layer_data(
-    layer_name: str, keys: list[str | None], layer_access: dict
-) -> dict:
+    layer_name: str,
+    keys: list[str | None],
+    layer_access: dict[str, list[LayerAccessInfo]],
+) -> LayerData:
     """Build the layer data structure for rendering.
 
     Args:
@@ -564,13 +975,13 @@ def build_layer_data(
     # Row 1: keys[10:20]
     # Row 2: keys[20:30]
 
-    left_hand = [
+    left_hand: list[list[str | None]] = [
         [keys[0], keys[1], keys[2], keys[3], keys[4]],  # Row 0 left
         [keys[10], keys[11], keys[12], keys[13], keys[14]],  # Row 1 left
         [keys[20], keys[21], keys[22], keys[23], keys[24]],  # Row 2 left
     ]
 
-    right_hand = [
+    right_hand: list[list[str | None]] = [
         [keys[5], keys[6], keys[7], keys[8], keys[9]],  # Row 0 right
         [keys[15], keys[16], keys[17], keys[18], keys[19]],  # Row 1 right
         [keys[25], keys[26], keys[27], keys[28], keys[29]],  # Row 2 right
@@ -579,11 +990,11 @@ def build_layer_data(
     # Extract this layer's thumb keys from its own keys array
     # Indices: 32=left_combined, 33=left_outer, 34=left_inner
     #          35=right_inner, 36=right_outer, 37=right_combined
-    layer_left_thumbs = {
+    layer_left_thumbs: ThumbKeysDict = {
         "physical": [keys[33], keys[34]],  # left outer, left inner
         "combined": keys[32],
     }
-    layer_right_thumbs = {
+    layer_right_thumbs: ThumbKeysDict = {
         "physical": [keys[35], keys[36]],  # right inner, right outer
         "combined": keys[37],
     }
@@ -611,220 +1022,11 @@ def build_layer_data(
     }
 
 
-# === PDF RENDERING FUNCTIONS ===
-
-
-def draw_key(
-    pdf, x, y, width, height, text, font_size=7, is_combined=False, is_inactive=False
-):
-    """Draw a single key.
-
-    Args:
-        is_combined: True for combined thumb keys (red dashed border)
-        is_inactive: True for grayed out keys (not relevant for current layer)
-    """
-    # Normalize None to dash
-    if text is None:
-        text = "-"
-
-    # Determine color based on key type
-    if is_inactive:
-        # Grayed out keys for positional awareness
-        color = HexColor("#E8E8E8")  # Very light grey background
-        text_color = HexColor("#AAAAAA")  # Grey text
-    elif text == "-" or text == "":
-        color = HexColor("#CCCCCC")  # Light grey for empty
-        text_color = HexColor("#999999")
-        text = "-" if text is None else text
-    elif "→" in text or "↑" in text or "↓" in text or "←" in text:
-        color = HexColor("#90EE90")  # Light green for navigation
-        text_color = black
-    elif any(
-        c in text for c in ["CTRL", "ALT", "SHIFT", "LGUI", "RGUI", "LSHFT", "RSHFT"]
-    ):
-        color = HexColor("#FFB6C1")  # Light pink for modifiers
-        text_color = black
-    elif text in ["BTN1", "BTN2", "BTN3", "RDO", "UND", "PST", "CPY", "CUT"]:
-        color = HexColor("#87CEEB")  # Sky blue for mouse/clipboard
-        text_color = black
-    elif "BOOT" in text or "→" in text:
-        color = HexColor("#DDA0DD")  # Plum for layer access
-        text_color = black
-    elif text in ["BSPC", "RET", "DEL", "ESC", "SPC", "TAB", "SPACE"]:
-        color = HexColor("#F0E68C")  # Khaki for system keys
-        text_color = black
-    else:
-        color = HexColor("#FFFFFF")  # White for regular keys
-        text_color = black
-
-    # Draw key background
-    pdf.setFillColor(color)
-    pdf.setStrokeColor(black if not is_inactive else HexColor("#CCCCCC"))
-    pdf.setLineWidth(0.5)
-    pdf.rect(x, y, width, height, fill=1)
-
-    # Add red dashed border for combined thumb keys (active ones)
-    if is_combined and not is_inactive:
-        pdf.setLineWidth(1)
-        pdf.setStrokeColor(HexColor("#FF0000"))
-        pdf.setDash(2, 2)
-        pdf.rect(x, y, width, height, fill=0)
-        pdf.setDash()
-
-    # Draw text
-    pdf.setFont("Helvetica-Bold", font_size)
-    pdf.setFillColor(text_color)
-
-    # Center text
-    text_width = pdf.stringWidth(text, "Helvetica-Bold", font_size)
-    text_x = x + (width - text_width) / 2
-    text_y = y + (height - font_size) / 2
-    pdf.drawString(text_x, text_y, text)
-
-
-def create_layer_section(pdf, layer_name, layer_data, y_offset, width):
-    """Create a single layer section on a page"""
-    # Key dimensions
-    key_width = 0.60 * inch
-    key_height = 0.34 * inch
-    key_spacing = 0.03 * inch
-    hand_gap = 0.40 * inch
-
-    # Calculate positions
-    left_hand = layer_data["left_hand"]
-    right_hand = layer_data["right_hand"]
-
-    # Total width needed for one hand (5 keys + 4 spacings)
-    hand_width = 5 * key_width + 4 * key_spacing
-    # Total width for both hands with proper gap
-    total_width = 2 * hand_width + hand_gap
-
-    # Center the keyboard layout horizontally on the page
-    page_center = width / 2
-    left_hand_x = page_center - total_width / 2
-    right_hand_x = left_hand_x + hand_width + hand_gap
-
-    # Reset fill color to black for text
-    pdf.setFillColor(black)
-
-    # Title above left hand keyboard
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(left_hand_x, y_offset, layer_name)
-
-    # Access info above right hand keyboard (right-aligned)
-    pdf.setFont("Helvetica-Bold", 8)
-    pdf.setFillColor(HexColor("#0066CC"))
-    access_text = f"Access: {layer_data['access']}"
-    # Truncate access text if too long for right hand area
-    max_access_width = hand_width - 0.1 * inch
-    while (
-        pdf.stringWidth(access_text, "Helvetica-Bold", 8) > max_access_width
-        and len(access_text) > 15
-    ):
-        access_text = access_text[:-4] + "..."
-    access_width = pdf.stringWidth(access_text, "Helvetica-Bold", 8)
-    pdf.drawString(right_hand_x + hand_width - access_width, y_offset, access_text)
-    pdf.setFillColor(black)
-
-    # Content area y positions - start keys below the title (with adequate spacing)
-    keys_start_y = y_offset - 0.45 * inch
-    first_row_y = keys_start_y
-
-    # Draw left hand regular keys (3 rows of 5 keys)
-    for row_idx, row in enumerate(left_hand):
-        y = first_row_y - (row_idx * (key_height + key_spacing))
-        for col_idx, key in enumerate(row):
-            x = left_hand_x + col_idx * (key_width + key_spacing)
-            key_text = key if key is not None else "-"
-            draw_key(pdf, x, y, key_width, key_height, key_text, font_size=9)
-
-    # Calculate thumb row y positions (below finger keys)
-    physical_thumb_y = first_row_y - (3 * (key_height + key_spacing)) - 0.04 * inch
-    combined_thumb_y = physical_thumb_y - (key_height + 0.04 * inch)
-
-    # Draw left hand thumb keys
-    left_thumbs = layer_data["left_thumbs"]
-    left_active = left_thumbs.get("active")
-
-    # Draw physical thumb keys (aligned to interior = columns 3-4)
-    for idx, key in enumerate(left_thumbs["physical"]):
-        col_offset = 3 + idx  # Columns 3 and 4
-        x = left_hand_x + col_offset * (key_width + key_spacing)
-        is_inactive = left_active != "all" and left_active != idx
-        draw_key(
-            pdf,
-            x,
-            physical_thumb_y,
-            key_width,
-            key_height,
-            key,
-            font_size=9,
-            is_inactive=is_inactive,
-        )
-
-    # Draw combined thumb key (centered under physical thumbs)
-    x = left_hand_x + 3 * (key_width + key_spacing) + (key_width + key_spacing) / 2
-    is_inactive = left_active != "all" and left_active != "combined"
-    draw_key(
-        pdf,
-        x,
-        combined_thumb_y,
-        key_width,
-        key_height,
-        left_thumbs["combined"],
-        font_size=9,
-        is_combined=True,
-        is_inactive=is_inactive,
-    )
-
-    # Draw right hand regular keys (3 rows of 5 keys)
-    for row_idx, row in enumerate(right_hand):
-        y = first_row_y - (row_idx * (key_height + key_spacing))
-        for col_idx, key in enumerate(row):
-            x = right_hand_x + col_idx * (key_width + key_spacing)
-            key_text = key if key is not None else "-"
-            draw_key(pdf, x, y, key_width, key_height, key_text, font_size=9)
-
-    # Draw right hand thumb keys
-    right_thumbs = layer_data["right_thumbs"]
-    right_active = right_thumbs.get("active")
-
-    # Draw physical thumb keys (aligned to interior = columns 0-1)
-    for idx, key in enumerate(right_thumbs["physical"]):
-        col_offset = idx  # Columns 0 and 1
-        x = right_hand_x + col_offset * (key_width + key_spacing)
-        is_inactive = right_active != "all" and right_active != idx
-        draw_key(
-            pdf,
-            x,
-            physical_thumb_y,
-            key_width,
-            key_height,
-            key,
-            font_size=9,
-            is_inactive=is_inactive,
-        )
-
-    # Draw combined thumb key (centered under physical thumbs)
-    x = right_hand_x + (key_width + key_spacing) / 2
-    is_inactive = right_active != "all" and right_active != "combined"
-    draw_key(
-        pdf,
-        x,
-        combined_thumb_y,
-        key_width,
-        key_height,
-        right_thumbs["combined"],
-        font_size=9,
-        is_combined=True,
-        is_inactive=is_inactive,
-    )
-
-
 # === MAIN LOGIC ===
 
 
-def main():
+def main() -> None:
+    """Main entry point for PDF generation."""
     # Paths
     script_dir = Path(__file__).parent
     repo_root = script_dir.parent
@@ -890,6 +1092,10 @@ def main():
     pdf = canvas.Canvas(str(pdf_path), pagesize=letter)
     width, height = letter
 
+    # Create renderer with configuration
+    config = PDFConfig()
+    renderer = PDFRenderer(config)
+
     # Dynamically group layers into pages
     page_groupings = create_page_groupings(list(layers.keys()))
     print(f"Page groupings: {page_groupings}")
@@ -903,29 +1109,41 @@ def main():
 
     for page_num, page_layers in enumerate(page_groupings):
         # Title on page
-        pdf.setFont("Helvetica-Bold", 14)
-        pdf.drawString(0.5 * inch, height - 0.35 * inch, "Miryoku Keyboard Layers")
-
-        # Legend for thumb keys
-        pdf.setFont("Helvetica", 8)
-        pdf.drawString(0.5 * inch, height - 0.55 * inch, legend)
-
-        # Page number
-        pdf.setFont("Helvetica", 9)
+        pdf.setFont("Helvetica-Bold", config.title_font_size)
         pdf.drawString(
-            width - 1 * inch, height - 0.35 * inch, f"Page {page_num + 1}/{total_pages}"
+            config.margin_left * inch,
+            height - config.margin_top * inch,
+            "Miryoku Keyboard Layers",
         )
 
-        # Use consistent section height for all pages
-        section_height = 2.25 * inch  # Same height for all pages
+        # Legend for thumb keys
+        pdf.setFont("Helvetica", config.legend_font_size)
+        pdf.drawString(
+            config.margin_left * inch,
+            height - (config.margin_top + config.title_to_legend) * inch,
+            legend,
+        )
 
-        y_start = height - 0.85 * inch
+        # Page number
+        pdf.setFont("Helvetica", config.page_number_font_size)
+        pdf.drawString(
+            width - config.margin_right * inch,
+            height - config.margin_top * inch,
+            f"Page {page_num + 1}/{total_pages}",
+        )
+
+        y_start = height - (
+            (config.margin_top + config.title_to_legend + config.legend_to_keys) * inch
+        )
 
         for section_idx, layer_name in enumerate(page_layers):
             if layer_name in layers:
                 layer_data = layers[layer_name]
-                y_offset = y_start - (section_idx * section_height)
-                create_layer_section(pdf, layer_name, layer_data, y_offset, width)
+                section_height_inch = config.section_height * inch
+                y_offset = y_start - (section_idx * section_height_inch)
+                renderer.draw_layer_section(
+                    pdf, layer_name, layer_data, y_offset, width
+                )
 
         pdf.showPage()
 
