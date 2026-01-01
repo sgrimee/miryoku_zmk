@@ -10,6 +10,7 @@ from .config import PDFConfig
 from .key_code_map import KeyCodeMap
 from .layer_processor import build_layer_data, create_page_groupings
 from .parser import (
+    detect_keyboard_layout,
     discover_layers,
     extract_layer_definition,
     extract_thumb_keys,
@@ -38,6 +39,10 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     print(f"Reading config from {config_file}")
     content = parse_config_file(config_file)
 
+    # Detect keyboard layout type
+    layout = detect_keyboard_layout(content)
+    print(f"Detected layout: {layout}")
+
     # Discover layers from config file
     layers_to_display = discover_layers(content)
     print(f"Discovered layers: {layers_to_display}")
@@ -50,12 +55,12 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     base_def = extract_layer_definition(content, "BASE")
     if base_def is None:
         sys.exit("ERROR: Could not find MIRYOKU_LAYER_BASE in config")
-    layer_access = parse_layer_access_from_base(base_def, key_map)
+    layer_access = parse_layer_access_from_base(base_def, key_map, layout)
 
     # Parse all layers for &u_to_U_* patterns (multi-layer access)
     print("Parsing all layers for multi-layer access information...")
     all_layer_access = parse_layer_access_from_all_layers(
-        content, layers_to_display, key_map
+        content, layers_to_display, key_map, layout
     )
 
     # Parse TAP layer for thumb key labels (fall back to BASE if TAP doesn't exist)
