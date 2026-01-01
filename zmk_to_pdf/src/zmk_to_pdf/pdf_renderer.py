@@ -48,7 +48,7 @@ class PDFRenderer:
 
         # Get colors - if it's an access key, override with system color (yellow)
         if is_access_key:
-            bg_color = HexColor(self.config.color_system)
+            bg_color = HexColor(self.config.color_access_key)
             text_color = black
         else:
             bg_color, text_color = self.colorizer.get_colors(text, is_inactive)
