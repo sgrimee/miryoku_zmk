@@ -1027,11 +1027,19 @@ def build_layer_data(
 
 def main() -> None:
     """Main entry point for PDF generation."""
-    # Paths
-    script_dir = Path(__file__).parent
-    repo_root = script_dir.parent
-    config_path = repo_root / "miryoku" / "custom_config.h"
-    pdf_path = repo_root / "layout.pdf"
+    # Check for command line arguments
+    if len(sys.argv) < 2:
+        sys.exit("Usage: generate_layout_pdf.py <config_file> [output_pdf]")
+
+    config_path = Path(sys.argv[1])
+    if not config_path.exists():
+        sys.exit(f"ERROR: Config file not found: {config_path}")
+
+    # Output PDF path - use second argument if provided, otherwise use current directory
+    if len(sys.argv) >= 3:
+        pdf_path = Path(sys.argv[2])
+    else:
+        pdf_path = Path.cwd() / "layout.pdf"
 
     # Parse config file
     print(f"Reading config from {config_path}")

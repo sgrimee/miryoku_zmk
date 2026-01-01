@@ -96,5 +96,5 @@ clean:
 # Regenerate layer visualization PDF
 pdf:
 	@echo "Generating layer visualization PDF..."
-	uv run scripts/generate_layout_pdf.py
+	cd zmk_to_pdf && uv run python src/generate_layout_pdf.py ../miryoku/custom_config.h ../layout.pdf
 	@echo "✓ PDF generated: layout.pdf"

@@ -1,7 +1,7 @@
 [project]
-name = "miryoku-zmk"
+name = "zmk-layout-pdf"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generate PDF visualizations of ZMK keyboard layouts from custom_config.h files"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
