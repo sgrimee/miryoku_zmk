@@ -99,7 +99,6 @@ class KeyColorizer:
                 "MEDIA",
                 "BUTTON",
                 "BASE",
-                "EXTRA",
                 "TAP",
             ]
         ):

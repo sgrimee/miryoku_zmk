@@ -301,15 +301,14 @@ def determine_position_name(index: int) -> str:
     return f"{hand}_row{row}_col{local_col}"
 
 
-def discover_layers(content: str, include_extra: bool = False) -> list[str]:
+def discover_layers(content: str) -> list[str]:
     """Discover all MIRYOKU_LAYER_* definitions in the config file.
 
     Returns layer names in the order they appear in the config file.
-    Excludes BASE by default. Can optionally include EXTRA.
+    Excludes BASE by default.
 
     Args:
         content: File content to search
-        include_extra: Whether to include the EXTRA layer
 
     Returns:
         List of layer names found in config (e.g., ["TAP", "NUM", "SYM", ...])
@@ -319,8 +318,6 @@ def discover_layers(content: str, include_extra: bool = False) -> list[str]:
 
     # Filter out BASE (always excluded)
     excluded = {"BASE"}
-    if not include_extra:
-        excluded.add("EXTRA")
 
     layers = [m for m in matches if m not in excluded]
 

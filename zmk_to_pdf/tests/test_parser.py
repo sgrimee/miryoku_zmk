@@ -172,7 +172,7 @@ class TestParseLayerAccessFromAllLayers:
         self, config_full: str, key_map: KeyCodeMap
     ) -> None:
         """Test parsing &u_to_U_* patterns from all layers."""
-        layers_to_scan = discover_layers(config_full, include_extra=True)
+        layers_to_scan = discover_layers(config_full)
         all_access = parse_layer_access_from_all_layers(
             config_full, layers_to_scan, key_map
         )
@@ -184,7 +184,7 @@ class TestParseLayerAccessFromAllLayers:
         self, config_full: str, key_map: KeyCodeMap
     ) -> None:
         """Test that TAP layer access is detected from other layers."""
-        layers_to_scan = discover_layers(config_full, include_extra=True)
+        layers_to_scan = discover_layers(config_full)
         all_access = parse_layer_access_from_all_layers(
             config_full, layers_to_scan, key_map
         )
@@ -201,7 +201,7 @@ class TestParseLayerAccessFromAllLayers:
         self, config_full: str, key_map: KeyCodeMap
     ) -> None:
         """Test structure of multi-layer access info."""
-        layers_to_scan = discover_layers(config_full, include_extra=True)
+        layers_to_scan = discover_layers(config_full)
         all_access = parse_layer_access_from_all_layers(
             config_full, layers_to_scan, key_map
         )

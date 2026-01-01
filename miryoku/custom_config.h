@@ -39,7 +39,7 @@ U_BTN2,            U_BTN1,            U_BTN3,            U_NP,              U_NP
 
 
 #define MIRYOKU_LAYER_NAV \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
+U_BOOT,            &u_to_U_TAP,       U_NA,              &u_to_U_BASE,      U_NA,              \
 U_NA,              U_NA,              U_NA,              U_NA,              U_NA,              \
 \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \
@@ -52,7 +52,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 &kp BSPC,          &kp RET,           &kp DEL,           U_NP,              U_NP
 
 #define MIRYOKU_LAYER_MEDIA \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
+U_BOOT,            &u_to_U_TAP,       U_NA,              &u_to_U_BASE,      U_NA,              \
 U_RGB_TOG,         U_RGB_EFF,         U_RGB_HUI,         U_RGB_SAI,         U_RGB_BRI,         \
 \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \
@@ -65,7 +65,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 &kp C_STOP,        &kp C_PP,          &kp C_MUTE,        U_NP,              U_NP
 
 #define MIRYOKU_LAYER_NUM \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
+U_BOOT,            &u_to_U_TAP,       U_NA,              &u_to_U_BASE,      U_NA,              \
 &kp LBKT,          &kp N7,            &kp N8,            &kp N9,            &kp RBKT,          \
 \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \
@@ -79,7 +79,7 @@ U_NP,              U_NP,              U_NA,              U_NA,              U_NA
 
 #define MIRYOKU_LAYER_SYM \
 &kp LBRC,          &kp AMPS,          &kp ASTRK,         &kp LPAR,          &kp RBRC,          \
-U_NA,              &u_to_U_BASE,      &u_to_U_EXTRA,     &u_to_U_TAP,       U_BOOT,            \
+U_NA,              &u_to_U_BASE,      U_NA,              &u_to_U_TAP,       U_BOOT,            \
 \
 &kp COLON,         &kp DLLR,          &kp PRCNT,         &kp CARET,         &kp PLUS,          \
 U_NA,              &kp RSHFT,         &kp RGUI,          &kp LALT,          &kp RCTRL,         \
@@ -91,7 +91,7 @@ U_NP,              U_NP,              &kp LPAR,          &kp RPAR,          &kp 
 U_NA,              U_NA,              U_NA,              U_NP,              U_NP
 
 #define MIRYOKU_LAYER_FUN \
-U_BOOT,            &u_to_U_TAP,       &u_to_U_EXTRA,     &u_to_U_BASE,      U_NA,              \
+U_BOOT,            &u_to_U_TAP,       U_NA,              &u_to_U_BASE,      U_NA,              \
 &kp F12,           &kp F7,            &kp F8,            &kp F9,            &kp PSCRN,         \
 \
 &kp LCTRL,         &kp LALT,          &kp LGUI,          &kp LSHFT,         U_NA,              \

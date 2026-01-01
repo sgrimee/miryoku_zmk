@@ -39,7 +39,7 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     content = parse_config_file(config_file)
 
     # Discover layers from config file
-    layers_to_display = discover_layers(content, include_extra=True)
+    layers_to_display = discover_layers(content)
     print(f"Discovered layers: {layers_to_display}")
 
     if not layers_to_display:
