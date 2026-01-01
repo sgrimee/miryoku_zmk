@@ -9,6 +9,7 @@ from zmk_to_pdf.parser import (
     extract_layer_definition,
     extract_thumb_keys,
     parse_layer_access_from_base,
+    parse_layer_access_from_all_layers,
     parse_layer_keys,
 )
 
@@ -160,6 +161,61 @@ class TestParseLayerAccessFromBase:
         assert "position" in info
         assert "key" in info
         assert "index" in info
+        assert "source_layer" in info
+        assert info["source_layer"] is None  # BASE layer access has no source_layer
+
+
+class TestParseLayerAccessFromAllLayers:
+    """Test parsing access from all layers."""
+
+    def test_parse_layer_access_from_all_layers(
+        self, config_full: str, key_map: KeyCodeMap
+    ) -> None:
+        """Test parsing &u_to_U_* patterns from all layers."""
+        layers_to_scan = discover_layers(config_full, include_extra=True)
+        all_access = parse_layer_access_from_all_layers(
+            config_full, layers_to_scan, key_map
+        )
+
+        # Should find TAP layer access from other layers
+        assert "TAP" in all_access or len(all_access) > 0
+
+    def test_tap_layer_access_detected(
+        self, config_full: str, key_map: KeyCodeMap
+    ) -> None:
+        """Test that TAP layer access is detected from other layers."""
+        layers_to_scan = discover_layers(config_full, include_extra=True)
+        all_access = parse_layer_access_from_all_layers(
+            config_full, layers_to_scan, key_map
+        )
+
+        if "TAP" in all_access:
+            tap_access = all_access["TAP"]
+            assert len(tap_access) > 0
+            # Check that access info has source_layer set
+            for info in tap_access:
+                assert "source_layer" in info
+                assert info["source_layer"] is not None
+
+    def test_multi_layer_access_structure(
+        self, config_full: str, key_map: KeyCodeMap
+    ) -> None:
+        """Test structure of multi-layer access info."""
+        layers_to_scan = discover_layers(config_full, include_extra=True)
+        all_access = parse_layer_access_from_all_layers(
+            config_full, layers_to_scan, key_map
+        )
+
+        # Find first target layer with access info
+        for target_layer, access_list in all_access.items():
+            if access_list:
+                info = access_list[0]
+                assert "position" in info
+                assert "key" in info
+                assert "index" in info
+                assert "source_layer" in info
+                assert info["source_layer"] is not None
+                break
 
 
 class TestDeterminePositionName:

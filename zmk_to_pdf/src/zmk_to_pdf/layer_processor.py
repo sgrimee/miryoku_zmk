@@ -37,7 +37,9 @@ def create_page_groupings(layers: list[str]) -> list[list[str]]:
 
 
 def determine_active_thumb(
-    layer_name: str, layer_access: dict[str, list[LayerAccessInfo]]
+    layer_name: str,
+    layer_access: dict[str, list[LayerAccessInfo]],
+    all_layer_access: dict[str, list[LayerAccessInfo]] | None = None,
 ) -> dict[str, str | int | None]:
     """Determine which thumb keys are the access keys for this layer.
 
@@ -49,11 +51,13 @@ def determine_active_thumb(
     gets highlighted in yellow. All other keys with actual keycodes (not U_NA or U_NP)
     are considered active in the layer.
     """
-    # For TAP layer, no thumb keys are used to access it (it's accessed via →TAP)
-    # So we return None to indicate no access keys, but thumb keys will still be
-    # shown as active if they have keycodes
-    if layer_name == "TAP":
-        return {"left": None, "right": None}
+    # For TAP layer, check if it has access keys from other layers
+    if layer_name == "TAP" and all_layer_access:
+        if "TAP" in all_layer_access:
+            return _get_active_thumbs_from_access(all_layer_access["TAP"])
+        else:
+            # TAP has no multi-layer access keys
+            return {"left": None, "right": None}
 
     if layer_name not in layer_access:
         return {"left": None, "right": None}
@@ -61,6 +65,40 @@ def determine_active_thumb(
     active: dict[str, str | int | None] = {"left": None, "right": None}
 
     for info in layer_access[layer_name]:
+        position = info["position"]
+
+        if position == "left_combined":
+            active["left"] = "combined"
+        elif position == "left_outer":
+            active["left"] = 0
+        elif position == "left_inner":
+            active["left"] = 1
+        elif position == "right_combined":
+            active["right"] = "combined"
+        elif position == "right_inner":
+            active["right"] = 0
+        elif position == "right_outer":
+            active["right"] = 1
+
+    return active
+
+
+def _get_active_thumbs_from_access(
+    access_info: list[LayerAccessInfo],
+) -> dict[str, str | int | None]:
+    """Extract active thumb positions from access info list.
+
+    Used for multi-layer access (e.g., TAP accessed from other layers).
+
+    Args:
+        access_info: List of LayerAccessInfo for a target layer
+
+    Returns:
+        Dictionary with "left" and "right" active thumb positions
+    """
+    active: dict[str, str | int | None] = {"left": None, "right": None}
+
+    for info in access_info:
         position = info["position"]
 
         if position == "left_combined":
@@ -155,6 +193,7 @@ def build_layer_data(
     layer_name: str,
     keys: list[str | None],
     layer_access: dict[str, list[LayerAccessInfo]],
+    all_layer_access: dict[str, list[LayerAccessInfo]] | None = None,
 ) -> LayerData:
     """Build the layer data structure for rendering.
 
@@ -162,6 +201,7 @@ def build_layer_data(
         layer_name: Name of the layer (e.g., "TAP", "NAV")
         keys: List of 40 translated key labels (with U_NP as None)
         layer_access: Access map from parse_layer_access_from_base()
+        all_layer_access: Access map from parse_layer_access_from_all_layers()
 
     Returns:
         Dictionary with left_hand, right_hand, left_thumbs, right_thumbs, access
@@ -196,7 +236,7 @@ def build_layer_data(
     }
 
     # Determine active thumbs
-    active_thumbs = determine_active_thumb(layer_name, layer_access)
+    active_thumbs = determine_active_thumb(layer_name, layer_access, all_layer_access)
 
     # Generate access text
     access_text = generate_access_text(layer_name, layer_access)

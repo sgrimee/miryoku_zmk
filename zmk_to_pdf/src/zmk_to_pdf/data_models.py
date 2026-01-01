@@ -24,6 +24,7 @@ class LayerAccessInfo(TypedDict):
     position: str
     key: str
     index: int
+    source_layer: str | None  # None for BASE access, layer name for other layers
 
 
 class LayerData(TypedDict):

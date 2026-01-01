@@ -16,6 +16,7 @@ from .parser import (
     parse_config_file,
     parse_layer_keys,
     parse_layer_access_from_base,
+    parse_layer_access_from_all_layers,
 )
 from .pdf_renderer import PDFRenderer
 
@@ -38,11 +39,11 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     content = parse_config_file(config_file)
 
     # Discover layers from config file
-    layers_to_display = discover_layers(content)
+    layers_to_display = discover_layers(content, include_extra=True)
     print(f"Discovered layers: {layers_to_display}")
 
     if not layers_to_display:
-        sys.exit("ERROR: No layers found in config (excluding BASE and EXTRA)")
+        sys.exit("ERROR: No layers found in config")
 
     # Parse BASE layer for access information
     print("Parsing BASE layer for access information...")
@@ -50,6 +51,12 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     if base_def is None:
         sys.exit("ERROR: Could not find MIRYOKU_LAYER_BASE in config")
     layer_access = parse_layer_access_from_base(base_def, key_map)
+
+    # Parse all layers for &u_to_U_* patterns (multi-layer access)
+    print("Parsing all layers for multi-layer access information...")
+    all_layer_access = parse_layer_access_from_all_layers(
+        content, layers_to_display, key_map
+    )
 
     # Parse TAP layer for thumb key labels (fall back to BASE if TAP doesn't exist)
     print("Parsing thumb key labels...")
@@ -82,7 +89,9 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
             )
             continue
 
-        layers[layer_name] = build_layer_data(layer_name, keys, layer_access)
+        layers[layer_name] = build_layer_data(
+            layer_name, keys, layer_access, all_layer_access
+        )
 
     if not layers:
         sys.exit("ERROR: No valid layers found to display")
@@ -103,7 +112,7 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
     total_pages = len(page_groupings)
 
     # Generate legend text - position-only (layout-agnostic)
-    legend = "Legend: Red dashed border = Combined thumb key (left outer + left inner on left, right inner + right outer on right)"
+    legend = "Legend: Yellow background = Layer access key | Red dashed border = Combined thumb key"
 
     for page_num, page_layers in enumerate(page_groupings):
         # Title on page

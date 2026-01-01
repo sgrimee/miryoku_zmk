@@ -191,8 +191,82 @@ def parse_layer_access_from_base(
                     "position": position,
                     "key": translated_key or key_name,
                     "index": idx,
+                    "source_layer": None,  # BASE layer access has no source_layer
                 }
             )
+
+    return access_map
+
+
+def parse_layer_access_from_all_layers(
+    content: str, layers_to_scan: list[str], key_map: KeyCodeMap
+) -> dict[str, list[LayerAccessInfo]]:
+    """Parse all layers to find &u_to_U_* patterns indicating layer access.
+
+    This scans non-BASE layers for &u_to_U_* behaviors which indicate
+    that a layer can be accessed from another layer.
+
+    Args:
+        content: File content to search
+        layers_to_scan: List of layer names to scan (excluding BASE)
+        key_map: KeyCodeMap for key translation
+
+    Returns:
+        Dictionary mapping target layer names to access info from all sources
+    """
+    access_map: dict[str, list[LayerAccessInfo]] = {}
+
+    # Scan each layer for &u_to_U_* patterns
+    for source_layer in layers_to_scan:
+        layer_def = extract_layer_definition(content, source_layer)
+        if layer_def is None:
+            continue
+
+        # Parse keys from this layer
+        keys_raw = []
+        current_key = ""
+        paren_depth = 0
+
+        for char in layer_def:
+            if char == "(":
+                paren_depth += 1
+                current_key += char
+            elif char == ")":
+                paren_depth -= 1
+                current_key += char
+            elif char == "," and paren_depth == 0:
+                if current_key.strip():
+                    keys_raw.append(current_key.strip())
+                current_key = ""
+            else:
+                current_key += char
+
+        if current_key.strip():
+            keys_raw.append(current_key.strip())
+
+        # Search for &u_to_U_* patterns
+        u_to_pattern = r"&u_to_U_(\w+)"
+
+        for idx, key_code in enumerate(keys_raw):
+            match = re.search(u_to_pattern, key_code)
+            if match:
+                target_layer = match.group(1)
+
+                # Determine position name
+                position = determine_position_name(idx)
+
+                # Add to access map
+                if target_layer not in access_map:
+                    access_map[target_layer] = []
+
+                access_map[target_layer].append(
+                    {
+                        "position": position,
+                        "key": f"→{source_layer}",  # Show source layer in key field
+                        "index": idx,
+                        "source_layer": source_layer,
+                    }
+                )
 
     return access_map
 
@@ -227,14 +301,15 @@ def determine_position_name(index: int) -> str:
     return f"{hand}_row{row}_col{local_col}"
 
 
-def discover_layers(content: str) -> list[str]:
+def discover_layers(content: str, include_extra: bool = False) -> list[str]:
     """Discover all MIRYOKU_LAYER_* definitions in the config file.
 
     Returns layer names in the order they appear in the config file.
-    Excludes BASE and EXTRA (not displayed in PDF).
+    Excludes BASE by default. Can optionally include EXTRA.
 
     Args:
         content: File content to search
+        include_extra: Whether to include the EXTRA layer
 
     Returns:
         List of layer names found in config (e.g., ["TAP", "NUM", "SYM", ...])
@@ -242,8 +317,11 @@ def discover_layers(content: str) -> list[str]:
     pattern = r"#define\s+MIRYOKU_LAYER_([A-Z_]+)\s"
     matches = re.findall(pattern, content)
 
-    # Filter out BASE and EXTRA (these are not displayed)
-    excluded = {"BASE", "EXTRA"}
+    # Filter out BASE (always excluded)
+    excluded = {"BASE"}
+    if not include_extra:
+        excluded.add("EXTRA")
+
     layers = [m for m in matches if m not in excluded]
 
     return layers
