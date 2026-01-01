@@ -4,6 +4,12 @@ import re
 import sys
 from pathlib import Path
 
+from .constants import (
+    LAYOUT_34_MAX_KEYS,
+    LAYOUT_36_MAX_KEYS,
+    LAYOUT_40_MAX_KEYS,
+    MIN_KEYS_FOR_THUMBS,
+)
 from .data_models import LayerAccessInfo, ThumbKeyLabelDict
 from .key_code_map import KeyCodeMap, translate_key_code
 
@@ -134,8 +140,10 @@ def extract_thumb_keys(
     Raises:
         SystemExit: If layer has fewer than 38 keys
     """
-    if len(tap_keys) < 38:
-        sys.exit(f"ERROR: TAP layer has {len(tap_keys)} keys, expected at least 38")
+    if len(tap_keys) < MIN_KEYS_FOR_THUMBS:
+        sys.exit(
+            f"ERROR: TAP layer has {len(tap_keys)} keys, expected at least {MIN_KEYS_FOR_THUMBS}"
+        )
 
     # Extract thumb keys (indices 32-37)
     left_combined = tap_keys[32]
@@ -285,11 +293,11 @@ def detect_keyboard_layout(content: str) -> str:
     key_count = len(split_keys_respecting_parens(base_def))
 
     # Classify layout based on key count
-    if key_count <= 34:
+    if key_count <= LAYOUT_34_MAX_KEYS:
         return "34key"
-    elif key_count <= 36:
+    elif key_count <= LAYOUT_36_MAX_KEYS:
         return "36key"
-    elif key_count <= 40:
+    elif key_count <= LAYOUT_40_MAX_KEYS:
         return "40key"
     else:
         return "unknown"

@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
 from .config import PDFConfig
+from .constants import MIN_FINGER_KEYS
 from .key_code_map import KeyCodeMap
 from .layer_processor import build_layer_data, create_page_groupings
 from .parser import (
@@ -73,9 +74,9 @@ def generate_pdf(config_file: Path, output_pdf: Path) -> None:
             continue
 
         keys = parse_layer_keys(layer_def, key_map)
-        if len(keys) < 30:  # At least 30 finger keys expected
+        if len(keys) < MIN_FINGER_KEYS:
             print(
-                f"  WARNING: Skipping {layer_name} - has {len(keys)} keys, expected at least 30"
+                f"  WARNING: Skipping {layer_name} - has {len(keys)} keys, expected at least {MIN_FINGER_KEYS}"
             )
             continue
 
