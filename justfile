@@ -46,7 +46,35 @@ flash-left:
         rm -rf "$TMPDIR"; \
         echo "Left half flashed successfully!"; \
     else \
-        echo "Linux flash not yet implemented for single half. Use 'nix run .#flash' for both halves."; \
+        echo "Flashing Aurora Sweep LEFT half via DFU serial (Linux)..."; \
+        echo ""; \
+        TMPDIR=$(mktemp -d); \
+        echo "Creating DFU package in $TMPDIR..."; \
+        uv tool run adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application result/zmk_left.hex "$TMPDIR/dfu_left.zip" || { \
+            echo "ERROR: Failed to create DFU package"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        }; \
+        echo ""; \
+        echo "=== LEFT HALF ==="; \
+        echo "1. Double-click the RESET button on the left half to enter DFU bootloader"; \
+        read -p "2. Press Enter when ready to flash... " _; \
+        LEFT_PORT=$(ls -t /dev/ttyACM* 2>/dev/null | head -1); \
+        if [ -z "$LEFT_PORT" ]; then \
+            echo "ERROR: No USB serial port found. Make sure left half is in bootloader mode."; \
+            echo "Available ports: $(ls /dev/ttyACM* 2>/dev/null || echo 'none')"; \
+            echo ""; \
+            echo "NOTE: If you are in the dialout group, try unplugging and replugging the keyboard, then re-run this command."; \
+            echo "      If you are not in the dialout group, run: sudo usermod -a -G dialout \$USER"; \
+            echo "      (You'll need to log out and back in for the change to take effect.)"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        fi; \
+        echo "Flashing to $LEFT_PORT..."; \
+        uv tool run adafruit-nrfutil dfu serial --package "$TMPDIR/dfu_left.zip" -p "$LEFT_PORT" -b 115200 && \
+        echo ""; \
+        rm -rf "$TMPDIR"; \
+        echo "Left half flashed successfully!"; \
     fi
 
 # Flash right half via DFU serial (macOS) or USB drive (Linux)
@@ -78,10 +106,38 @@ flash-right:
         rm -rf "$TMPDIR"; \
         echo "Right half flashed successfully!"; \
     else \
-        echo "Linux flash not yet implemented for single half. Use 'nix run .#flash' for both halves."; \
+        echo "Flashing Aurora Sweep RIGHT half via DFU serial (Linux)..."; \
+        echo ""; \
+        TMPDIR=$(mktemp -d); \
+        echo "Creating DFU package in $TMPDIR..."; \
+        uv tool run adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application result/zmk_right.hex "$TMPDIR/dfu_right.zip" || { \
+            echo "ERROR: Failed to create DFU package"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        }; \
+        echo ""; \
+        echo "=== RIGHT HALF ==="; \
+        echo "1. Double-click the RESET button on the right half to enter DFU bootloader"; \
+        read -p "2. Press Enter when ready to flash... " _; \
+        RIGHT_PORT=$(ls -t /dev/ttyACM* 2>/dev/null | head -1); \
+        if [ -z "$RIGHT_PORT" ]; then \
+            echo "ERROR: No USB serial port found. Make sure right half is in bootloader mode."; \
+            echo "Available ports: $(ls /dev/ttyACM* 2>/dev/null || echo 'none')"; \
+            echo ""; \
+            echo "NOTE: If you are in the dialout group, try unplugging and replugging the keyboard, then re-run this command."; \
+            echo "      If you are not in the dialout group, run: sudo usermod -a -G dialout \$USER"; \
+            echo "      (You'll need to log out and back in for the change to take effect.)"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        fi; \
+        echo "Flashing to $RIGHT_PORT..."; \
+        uv tool run adafruit-nrfutil dfu serial --package "$TMPDIR/dfu_right.zip" -p "$RIGHT_PORT" -b 115200 && \
+        echo ""; \
+        rm -rf "$TMPDIR"; \
+        echo "Right half flashed successfully!"; \
     fi
 
-# Flash settings reset firmware via DFU serial (macOS)
+# Flash settings reset firmware via DFU serial (macOS) or USB drive (Linux)
 flash-reset:
     @if [[ "$(uname)" == "Darwin" ]]; then \
         echo "Flashing settings reset firmware via DFU serial (macOS)..."; \
@@ -116,7 +172,41 @@ flash-reset:
         echo "Settings reset firmware flashed successfully!"; \
         echo "The keyboard half will now clear its settings on next boot."; \
     else \
-        echo "Linux flash not yet implemented. Copy result-reset/zmk.uf2 to the keyboard USB drive manually."; \
+        echo "Flashing settings reset firmware via DFU serial (Linux)..."; \
+        echo ""; \
+        if [ ! -f result-reset/zmk.hex ]; then \
+            echo "ERROR: result-reset/zmk.hex not found. Run 'just build-reset' first."; \
+            exit 1; \
+        fi; \
+        TMPDIR=$(mktemp -d); \
+        echo "Creating DFU package in $TMPDIR..."; \
+        uv tool run adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application result-reset/zmk.hex "$TMPDIR/dfu_reset.zip" || { \
+            echo "ERROR: Failed to create DFU package"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        }; \
+        echo ""; \
+        echo "=== SETTINGS RESET ==="; \
+        echo "1. Connect the half you want to reset to USB"; \
+        echo "2. Double-click the RESET button to enter DFU bootloader"; \
+        read -p "3. Press Enter when ready to flash... " _; \
+        PORT=$(ls -t /dev/ttyACM* 2>/dev/null | head -1); \
+        if [ -z "$PORT" ]; then \
+            echo "ERROR: No USB serial port found. Make sure the keyboard is in bootloader mode."; \
+            echo "Available ports: $(ls /dev/ttyACM* 2>/dev/null || echo 'none')"; \
+            echo ""; \
+            echo "NOTE: If you are in the dialout group, try unplugging and replugging the keyboard, then re-run this command."; \
+            echo "      If you are not in the dialout group, run: sudo usermod -a -G dialout \$USER"; \
+            echo "      (You'll need to log out and back in for the change to take effect.)"; \
+            rm -rf "$TMPDIR"; \
+            exit 1; \
+        fi; \
+        echo "Flashing to $PORT..."; \
+        uv tool run adafruit-nrfutil dfu serial --package "$TMPDIR/dfu_reset.zip" -p "$PORT" -b 115200 && \
+        echo ""; \
+        rm -rf "$TMPDIR"; \
+        echo "Settings reset firmware flashed successfully!"; \
+        echo "The keyboard half will now clear its settings on next boot."; \
     fi
 
 # Flash both halves via DFU serial (macOS) or USB drive (Linux)
