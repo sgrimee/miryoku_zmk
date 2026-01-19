@@ -13,7 +13,6 @@ jobs:
         "bluemicro840_v1",
         "mikoto_520",
         "nice_nano",
-        "nice_nano_v2",
         "nrfmicro_11",
         "nrfmicro_13",
         "proton_c"

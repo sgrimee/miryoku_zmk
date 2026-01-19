@@ -14,7 +14,7 @@ jobs:
     secrets: inherit
     with:
       # alphas: '["QWERTY"]'
-      board: '["nice_nano_v2"]'
+      board: '["nice_nano"]'
       # clipboard: '["mac"]'
       # custom_config: 
       # extra: '["ColemakDHK"]'
