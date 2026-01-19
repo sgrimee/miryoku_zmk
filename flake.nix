@@ -13,19 +13,20 @@
     forAllSystems = nixpkgs.lib.genAttrs (nixpkgs.lib.attrNames zmk-nix.packages);
     zephyrDepsHash = "sha256-arF/XHsZXtL9LNgeN6Cni43nzRJyFuzyxKqqPJsvALA=";
   in {
-      packages = forAllSystems (system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        firmware-base = zmk-nix.legacyPackages.${system}.buildSplitKeyboard {
-          name = "aurora-sweep-firmware";
-          src = nixpkgs.lib.sourceFilesBySuffices self [
-            ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
-            ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
-          ];
-          board = "nice_nano";
-          shield = "splitkb_aurora_sweep_%PART%";
-          enableZmkStudio = false;
-          inherit zephyrDepsHash;
-          extraCmakeFlags = [ "-DCONFIG_BUILD_OUTPUT_HEX=y" ];
+       packages = forAllSystems (system: let
+         pkgs = nixpkgs.legacyPackages.${system};
+         firmware-base = zmk-nix.legacyPackages.${system}.buildSplitKeyboard {
+           name = "aurora-sweep-firmware";
+           src = nixpkgs.lib.sourceFilesBySuffices self [
+             ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+             ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig" ".h"
+           ];
+           board = "nice_nano";
+           shield = "splitkb_aurora_sweep_%PART%";
+           snippets = [ "zmk-usb-logging" ];
+           enableZmkStudio = false;
+           inherit zephyrDepsHash;
+           extraCmakeFlags = [ "-DCONFIG_BUILD_OUTPUT_HEX=y" ];
           installPhase = ''
             runHook preInstall
             mkdir $out
@@ -77,8 +78,14 @@
         update = zmk-nix.packages.${system}.update;
      });
 
-    devShells = forAllSystems (system: {
-      default = zmk-nix.devShells.${system}.default;
+    devShells = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      default = zmk-nix.devShells.${system}.default.overrideAttrs (oldAttrs: {
+        nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [
+          pkgs.picocom
+        ];
+      });
     });
   };
 }
